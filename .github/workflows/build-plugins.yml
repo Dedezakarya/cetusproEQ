@@ -1,0 +1,96 @@
+name: Build cetusproEQ VST3 + AU
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  windows-vst3:
+    name: Windows x64 VST3
+    runs-on: windows-2022
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Tool versions
+        shell: pwsh
+        run: |
+          cmake --version
+          git --version
+      - name: Configure (Visual Studio 2022)
+        shell: pwsh
+        run: cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64
+      - name: Compile VST3
+        shell: pwsh
+        run: cmake --build build-win --config Release --target cetusproEQ_VST3 --parallel 4
+      - name: Package Windows VST3
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $dirs = @(Get-ChildItem -Path build-win/cetusproEQ_artefacts -Recurse -Directory -Filter cetusproEQ.vst3)
+          if ($dirs.Count -ne 1) { throw "Expected exactly 1 VST3 bundle, found $($dirs.Count)" }
+          $bundle = $dirs[0].FullName
+          if (-not @(Get-ChildItem -LiteralPath $bundle -Recurse -File -Filter *.vst3).Count) {
+            throw "Built VST3 bundle has no .vst3 module: $bundle"
+          }
+          Compress-Archive -LiteralPath $bundle -DestinationPath dist/cetusproEQ-v0.1-Windows-x64-VST3.zip -CompressionLevel Optimal -Force
+          Get-Item dist/*.zip | Select-Object Name,Length
+      - name: Upload Windows VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cetusproEQ-v0.1-Windows-x64-VST3
+          path: dist/cetusproEQ-v0.1-Windows-x64-VST3.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  macos-au-vst3:
+    name: macOS Universal (Intel + Apple Silicon) AU/VST3
+    runs-on: macos-15-intel
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Tool versions
+        run: |
+          cmake --version
+          xcodebuild -version
+      - name: Configure universal macOS binaries
+        run: |
+          cmake -S . -B build-mac -G Xcode \
+            -DCMAKE_OSX_ARCHITECTURES='x86_64;arm64' \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO
+      - name: Compile VST3 and AU
+        run: cmake --build build-mac --config Release --target cetusproEQ_VST3 cetusproEQ_AU --parallel 4
+      - name: Find, inspect and package bundles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          mapfile_workaround() { :; }
+          vst=$(find build-mac/cetusproEQ_artefacts -type d -name 'cetusproEQ.vst3' -print -quit)
+          au=$(find build-mac/cetusproEQ_artefacts -type d -name 'cetusproEQ.component' -print -quit)
+          test -n "$vst" && test -d "$vst" || { echo 'VST3 bundle missing'; exit 1; }
+          test -n "$au" && test -d "$au" || { echo 'AU bundle missing'; exit 1; }
+          test -f "$vst/Contents/MacOS/cetusproEQ" || { echo 'VST3 executable missing'; exit 1; }
+          test -f "$au/Contents/MacOS/cetusproEQ" || { echo 'AU executable missing'; exit 1; }
+          xcrun lipo -info "$vst/Contents/MacOS/cetusproEQ"
+          xcrun lipo -info "$au/Contents/MacOS/cetusproEQ"
+          xcrun lipo -verify_arch x86_64 arm64 "$vst/Contents/MacOS/cetusproEQ"
+          xcrun lipo -verify_arch x86_64 arm64 "$au/Contents/MacOS/cetusproEQ"
+          codesign --force --deep --sign - "$vst"
+          codesign --force --deep --sign - "$au"
+          ditto -c -k --sequesterRsrc --keepParent "$vst" dist/cetusproEQ-v0.1-macOS-Universal-VST3.zip
+          ditto -c -k --sequesterRsrc --keepParent "$au" dist/cetusproEQ-v0.1-macOS-Universal-AU.zip
+          ls -lh dist/*.zip
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cetusproEQ-v0.1-macOS-Universal-AU-and-VST3
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 30
