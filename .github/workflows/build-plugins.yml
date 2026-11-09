@@ -79,9 +79,11 @@ jobs:
           test -f "$vst/Contents/MacOS/cetusproEQ" || { echo 'VST3 executable missing'; exit 1; }
           test -f "$au/Contents/MacOS/cetusproEQ" || { echo 'AU executable missing'; exit 1; }
           xcrun lipo -info "$vst/Contents/MacOS/cetusproEQ"
-          xcrun lipo -info "$au/Contents/MacOS/cetusproEQ"
-          xcrun lipo -verify_arch x86_64 arm64 "$vst/Contents/MacOS/cetusproEQ"
-          xcrun lipo -verify_arch x86_64 arm64 "$au/Contents/MacOS/cetusproEQ"
+          xcrun lipo -info "$au/Contents/MacOS/cetusproEQ"         
+          xcrun lipo "$vst/Contents/MacOS/cetusproEQ" -verify_arch x86_64
+          xcrun lipo "$vst/Contents/MacOS/cetusproEQ" -verify_arch arm64
+          xcrun lipo "$au/Contents/MacOS/cetusproEQ" -verify_arch x86_64
+          xcrun lipo "$au/Contents/MacOS/cetusproEQ" -verify_arch arm64
           codesign --force --deep --sign - "$vst"
           codesign --force --deep --sign - "$au"
           ditto -c -k --sequesterRsrc --keepParent "$vst" dist/cetusproEQ-v0.1-macOS-Universal-VST3.zip
