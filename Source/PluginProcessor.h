@@ -38,12 +38,12 @@ public:
     juce::AudioProcessorValueTreeState parameters;
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     static juce::String param(int band, const char* suffix) { return "b" + juce::String(band + 1) + suffix; }
-    int getBandType(int b) const { return juce::roundToInt(*parameters.getRawParameterValue(param(b,"type"))); }
-    bool isBandEnabled(int b) const { return *parameters.getRawParameterValue(param(b,"on")) > 0.5f; }
+    int getBandType(int b) const { return juce::roundToInt(parameters.getRawParameterValue(param(b,"type"))->load()); }
+    bool isBandEnabled(int b) const { return parameters.getRawParameterValue(param(b,"on"))->load() > 0.5f; }
     bool isBandDynamic(int b) const {
         return CetusEQ::canProcessDynamics(getBandType(b))
-            && *parameters.getRawParameterValue(param(b,"dyn")) > 0.5f
-            && std::abs(*parameters.getRawParameterValue(param(b,"range"))) > 0.001f;
+            && parameters.getRawParameterValue(param(b,"dyn"))->load() > 0.5f
+            && std::abs(parameters.getRawParameterValue(param(b,"range"))->load()) > 0.001f;
     }
     float getOutputPeak(int channel) const { return meterOutputs[static_cast<size_t>(juce::jlimit(0,1,channel))].load(std::memory_order_relaxed); }
     float getBandDynGain(int b) const { return meterDynamicGain[static_cast<size_t>(b)].load(std::memory_order_relaxed); }
