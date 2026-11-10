@@ -1,12 +1,15 @@
 #pragma once
 #include <JuceHeader.h>
 #include "CetusLink.h"
+#include "CetusEQFilters.h"
+#include <cmath>
 #include <array>
 #include <atomic>
 #include <cstdint>
 
 class CetusproEQAudioProcessor final : public juce::AudioProcessor {
 public:
+    static constexpr int numBands = 8;
     static constexpr int spectrumOrder = 11;
     static constexpr int spectrumSize = 1 << spectrumOrder;
     CetusproEQAudioProcessor();
@@ -35,6 +38,14 @@ public:
     juce::AudioProcessorValueTreeState parameters;
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     static juce::String param(int band, const char* suffix) { return "b" + juce::String(band + 1) + suffix; }
+    int getBandType(int b) const { return juce::roundToInt(*parameters.getRawParameterValue(param(b,"type"))); }
+    bool isBandEnabled(int b) const { return *parameters.getRawParameterValue(param(b,"on")) > 0.5f; }
+    bool isBandDynamic(int b) const {
+        return CetusEQ::canProcessDynamics(getBandType(b))
+            && *parameters.getRawParameterValue(param(b,"dyn")) > 0.5f
+            && std::abs(*parameters.getRawParameterValue(param(b,"range"))) > 0.001f;
+    }
+    float getBandDynGain(int b) const { return meterDynamicGain[static_cast<size_t>(b)].load(std::memory_order_relaxed); }
     float getBandFrequency(int b) const { return *parameters.getRawParameterValue(param(b,"freq")); }
     float getBandGain(int b) const { return *parameters.getRawParameterValue(param(b,"gain")); }
     float getBandQ(int b) const { return *parameters.getRawParameterValue(param(b,"q")); }
@@ -44,7 +55,8 @@ private:
         float envelope = 0.0f;
         float smoothedGain = 0.0f;
     };
-    std::array<Band,6> bands;
+    std::array<Band,numBands> bands;
+    std::array<std::atomic<float>,numBands> meterDynamicGain {};
     std::array<std::atomic<float>,spectrumSize> spectrumBefore {};
     std::array<std::atomic<float>,spectrumSize> spectrumAfter {};
     std::atomic<uint64_t> spectrumBeforeCount {0}, spectrumAfterCount {0};
