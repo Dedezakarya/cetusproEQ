@@ -20,3 +20,28 @@ cmake = Path("CMakeLists.txt").read_text(encoding="utf-8")
 if "VERSION 0.5.1" not in cmake:
     raise SystemExit("Unexpected project version after unpacking")
 print("Verified and restored cetusproEQ v0.5.1 source:", actual)
+
+# Portability fixes discovered by the first native Windows/macOS compile.
+# Apply only after verifying the exact archived source checksum above.
+editor_path = Path("Source/PluginEditor.cpp")
+editor = editor_path.read_text(encoding="utf-8")
+before = """    for(auto* b:{&initButton,&applyPresetButton,&savePresetButton,&openPresetButton,&undoButton,&redoButton,
+                 &analyzerButton,&prePostButton,&hudCloseButton,&holdButton,&smoothButton,&bandOn,&dynamicOn,&bypass})
+        b->removeListener(this);"""
+after = """    for(auto* b:{&initButton,&applyPresetButton,&savePresetButton,&openPresetButton,&undoButton,&redoButton,
+                 &analyzerButton,&prePostButton,&hudCloseButton,&holdButton,&smoothButton})
+        b->removeListener(this);
+    for(auto* b:{&bandOn,&dynamicOn,&bypass})
+        b->removeListener(this);"""
+if editor.count(before) != 1:
+    raise SystemExit("Expected mixed button cleanup loop not found exactly once")
+editor = editor.replace(before, after)
+if editor.count("cyan.withAlpha(0)") != 1:
+    raise SystemExit("Expected ambiguous alpha literal not found exactly once")
+editor = editor.replace("cyan.withAlpha(0)", "cyan.withAlpha(0.0f)")
+editor_hash = hashlib.sha256(editor.encode()).hexdigest()
+expected_editor_hash = "92a747f377a67e60ee118b686818c8b6ca550dc4b9506d1a2a35423bbd0191ed"
+if editor_hash != expected_editor_hash:
+    raise SystemExit(f"Corrected source hash mismatch: {editor_hash}")
+editor_path.write_text(editor, encoding="utf-8")
+print("Applied verified cross-platform GUI compile fixes:", editor_hash)
