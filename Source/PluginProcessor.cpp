@@ -60,6 +60,7 @@ void CetusproEQAudioProcessor::prepareToPlay(double rate, int) {
     lastLinkUpdate = 0;
     outputLevel = 0.0f;
     for (auto& gain : meterDynamicGain) gain.store(0.0f, std::memory_order_relaxed);
+    for (auto& peak : meterOutputs) peak.store(0.0f, std::memory_order_relaxed);
     for (auto& band : bands) {
         band.envelope=0;
         band.smoothedGain=0;
@@ -178,6 +179,15 @@ void CetusproEQAudioProcessor::captureSpectrum(const juce::AudioBuffer<float>& d
         ring[offset].store(0.5f * (left[i] + right[i]), std::memory_order_relaxed);
     }
     count.store(write + static_cast<uint64_t>(samples), std::memory_order_release);
+    if (post) {
+        for (int c=0; c<juce::jmin(channels,2); ++c) {
+            float peak=0.0f;
+            const float* audio=data.getReadPointer(c);
+            for(int n=0;n<samples;++n) peak=juce::jmax(peak,std::abs(audio[n]));
+            meterOutputs[static_cast<size_t>(c)].store(peak,std::memory_order_relaxed);
+        }
+        if(channels==1) meterOutputs[1].store(meterOutputs[0].load(std::memory_order_relaxed),std::memory_order_relaxed);
+    }
 }
 
 bool CetusproEQAudioProcessor::copySpectrum(std::array<float,spectrumSize>& samples, bool post) const noexcept {
