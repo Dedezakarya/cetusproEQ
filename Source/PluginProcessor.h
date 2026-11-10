@@ -2,9 +2,13 @@
 #include <JuceHeader.h>
 #include "CetusLink.h"
 #include <array>
+#include <atomic>
+#include <cstdint>
 
 class CetusproEQAudioProcessor final : public juce::AudioProcessor {
 public:
+    static constexpr int spectrumOrder = 11;
+    static constexpr int spectrumSize = 1 << spectrumOrder;
     CetusproEQAudioProcessor();
     ~CetusproEQAudioProcessor() override = default;
     void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -25,6 +29,9 @@ public:
     bool isBusesLayoutSupported(const BusesLayout&) const override;
     void getStateInformation(juce::MemoryBlock&) override;
     void setStateInformation(const void*, int) override;
+    void resetFlat();
+    bool copySpectrum(std::array<float,spectrumSize>& samples, bool post) const noexcept;
+    double spectrumSampleRate() const noexcept { return visualSampleRate.load(std::memory_order_relaxed); }
     juce::AudioProcessorValueTreeState parameters;
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     static juce::String param(int band, const char* suffix) { return "b" + juce::String(band + 1) + suffix; }
@@ -38,6 +45,11 @@ private:
         float smoothedGain = 0.0f;
     };
     std::array<Band,6> bands;
+    std::array<std::atomic<float>,spectrumSize> spectrumBefore {};
+    std::array<std::atomic<float>,spectrumSize> spectrumAfter {};
+    std::atomic<uint64_t> spectrumBeforeCount {0}, spectrumAfterCount {0};
+    std::atomic<double> visualSampleRate {48000.0};
+    void captureSpectrum(const juce::AudioBuffer<float>& data, int channels, bool post) noexcept;
     double currentSampleRate = 48000.0;
     uint64_t lastLinkUpdate = 0;
     float outputLevel = 0.0f;
