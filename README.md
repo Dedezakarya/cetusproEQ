@@ -1,4 +1,4 @@
-# cetusproEQ v0.1 — Cetus Production
+# cetusproEQ v0.2 — Cetus Production
 
 > **Build otomatis Windows/macOS:** baca [`docs/NATIVE-BUILD.md`](docs/NATIVE-BUILD.md). Workflow GitHub Actions ada di `.github/workflows/build-plugins.yml`. Arsip source ini **bukan** binary `.vst3`/`.component`.
 
@@ -43,7 +43,7 @@ Set DETECTOR SOURCE = DAW sidechain, enable the second input bus in the host, an
 ## Controls and DSP
 Each of 6 **bell/peaking** bands has: frequency, static gain, Q, threshold, signed dynamic range, attack, release, enable and dynamic switch. All bands share one detector source (Self / Link 1–4 / DAW sidechain). Signed range: negative = downward dynamic cut, positive = dynamic boost *above* threshold. State saved/restored with host project. Bypass and output gain included.
 
-DSP is a prototype: block-level peak detection and coefficient update, not sample-accurate automation or production-grade artifact suppression. The GUI shows an approximate static EQ curve (not FFT analysis). No external sidechain audio streaming, no cross-process link, no AAX, no HPF/shelf/notch, no linear phase, no oversampling, no factory preset browser yet.
+DSP is a prototype: block-level peak detection and coefficient update, not sample-accurate automation or production-grade artifact suppression. The GUI now includes a real FFT analyzer (pre/post) and approximate static EQ curve. No external sidechain audio streaming, no cross-process link, no AAX, no HPF/shelf/notch, no linear phase, no oversampling, no factory preset browser yet.
 
 ## Known limitations and test checklist
 - Link bus stores the latest peak only. If no sender posts before a receiver callback, the receiver reads 0 for that callback; host processing order influences behavior. No multiple concurrent senders per bus.
@@ -53,3 +53,10 @@ DSP is a prototype: block-level peak detection and coefficient update, not sampl
 - For shipping: parameter smoothing per sample, gain/lookahead options, frequency-selective detectors, analyzer, stress tests, and validation/codesigning are recommended.
 
 Copyright © 2026 Cetus Production. Source supplied for project development; see JUCE licensing for the framework.
+
+## v0.2 review notes
+- New inserts default to dynamic OFF and dynamic range 0 dB to avoid unexpected colouring.
+- When output gain is zero and all bands are flat/inactive, filter processing is skipped to preserve input samples.
+- Existing Logic projects can restore v0.1 settings: click **INIT FLAT** when testing.
+- FFT analyzer is live with PRE/POST toggle; the EQ response line remains an approximation, not the exact biquad transfer function.
+- Validate plugin builds in GitHub Actions and perform a sample-aligned null test before production use.
