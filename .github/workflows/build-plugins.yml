@@ -3,7 +3,7 @@ name: Build cetusproEQ VST3 + AU
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, 'feature/cetusproeq-v0.4-fft-transparent' ]
+    branches: [ main, master, 'feature/cetusproeq-v0.4-proworkflow' ]
   pull_request:
     branches: [ main ]
 
