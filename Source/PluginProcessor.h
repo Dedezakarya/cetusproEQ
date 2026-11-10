@@ -45,6 +45,7 @@ public:
             && *parameters.getRawParameterValue(param(b,"dyn")) > 0.5f
             && std::abs(*parameters.getRawParameterValue(param(b,"range"))) > 0.001f;
     }
+    float getOutputPeak(int channel) const { return meterOutputs[static_cast<size_t>(juce::jlimit(0,1,channel))].load(std::memory_order_relaxed); }
     float getBandDynGain(int b) const { return meterDynamicGain[static_cast<size_t>(b)].load(std::memory_order_relaxed); }
     float getBandFrequency(int b) const { return *parameters.getRawParameterValue(param(b,"freq")); }
     float getBandGain(int b) const { return *parameters.getRawParameterValue(param(b,"gain")); }
@@ -56,6 +57,7 @@ private:
         float smoothedGain = 0.0f;
     };
     std::array<Band,numBands> bands;
+    std::array<std::atomic<float>,2> meterOutputs {};
     std::array<std::atomic<float>,numBands> meterDynamicGain {};
     std::array<std::atomic<float>,spectrumSize> spectrumBefore {};
     std::array<std::atomic<float>,spectrumSize> spectrumAfter {};
