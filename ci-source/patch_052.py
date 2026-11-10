@@ -268,6 +268,17 @@ cs=cs.replace('outputLabel.setBounds(962,388,88,19);','outputLabel.setBounds(962
 # hide send/listen labels since drawn by drawBottom
 cs=cs.replace('sendLabel.setBounds(519,373,103,15);','sendLabel.setBounds(519,373,103,15);sendLabel.setVisible(false);')
 cs=cs.replace('listenLabel.setBounds(644,373,116,15);','listenLabel.setBounds(644,373,116,15);listenLabel.setVisible(false);')
+# Final layout adjustments.
+cs=cs.replace('presets.setBounds(252,22,252,28);', 'presets.setBounds(264,22,240,28);')
+cs=cs.replace('g.drawText("Analyzer",308,541,63,14,juce::Justification::centredLeft);', '')
+cs=cs.replace('const auto face = selected ? cyan : panel2;', '''auto face = selected ? cyan : panel2;
+    if(button.getButtonText().length()==1) {
+        const auto marker=button.getButtonText()[0];
+        if(marker>='1' && marker<='8') {
+            const auto bandFill=button.findColour(juce::TextButton::buttonColourId);
+            if(bandFill!=panel2)face=bandFill;
+        }
+    }''')
 h.write_text(hs, encoding='utf-8')
 c.write_text(cs, encoding='utf-8')
 cm=dst/'CMakeLists.txt'
