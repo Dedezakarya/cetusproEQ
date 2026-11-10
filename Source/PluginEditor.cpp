@@ -21,7 +21,7 @@ const std::array<juce::Colour,CetusproEQAudioProcessor::numBands> colors {
 
 CetusproEQAudioProcessorEditor::CetusproEQAudioProcessorEditor(CetusproEQAudioProcessor& p)
  : juce::AudioProcessorEditor(&p),processor(p) {
-    setSize(1280,790);
+    setSize(1280,660);
     for(int i=0;i<CetusproEQAudioProcessor::numBands;++i) {
         auto& b=bandButtons[static_cast<size_t>(i)];
         b.setButtonText(juce::String(i+1));
@@ -82,6 +82,8 @@ CetusproEQAudioProcessorEditor::CetusproEQAudioProcessorEditor(CetusproEQAudioPr
     outputAttachment=std::make_unique<SliderAttachment>(params,"output",output);
     dbSpectrum.fill(-96.0f);
     selectBand(0);
+    hudVisible=false;
+    updateFloatingPanel();
     startTimerHz(24);
 }
 CetusproEQAudioProcessorEditor::~CetusproEQAudioProcessorEditor(){
@@ -118,9 +120,9 @@ void CetusproEQAudioProcessorEditor::selectBand(int i){
 }
 void CetusproEQAudioProcessorEditor::buttonClicked(juce::Button* sender) {
     for(int i=0;i<CetusproEQAudioProcessor::numBands;++i){
-        if(sender==&bandButtons[static_cast<size_t>(i)]){selectBand(i);return;}
+        if(sender==&bandButtons[static_cast<size_t>(i)]){hudVisible=true;selectBand(i);return;}
     }
-    if(sender==&reset){processor.resetFlat();selectBand(0);}
+    if(sender==&reset){processor.resetFlat();hudVisible=false;selectBand(0);}
     else if(sender==&analyzer){analyzerOn=!analyzerOn;analyzer.setButtonText(analyzerOn?"Spectrum":"Spectrum OFF");}
     else if(sender==&togglePrePost){postSpectrum=!postSpectrum;togglePrePost.setButtonText(postSpectrum?"POST":"PRE");dbSpectrum.fill(-96);hasSpectrum=false;}
     repaint();
@@ -131,35 +133,37 @@ void CetusproEQAudioProcessorEditor::resized(){
     togglePrePost.setBounds(getWidth()-87,28,58,31);
     const auto x0=35;
     for(int b=0;b<CetusproEQAudioProcessor::numBands;++b)
-        bandButtons[static_cast<size_t>(b)].setBounds(x0+b*144,518,132,34);
+        bandButtons[static_cast<size_t>(b)].setBounds(x0+b*144,460,132,31);
     for(int i=0;i<7;++i){
         auto& k=knobs[static_cast<size_t>(i)];
         const int x=43+i*153;
-        k.label.setBounds(x,572,137,21);
-        k.slider.setBounds(x+15,595,108,96);
+        k.label.setBounds(x,496,137,18);
+        k.slider.setBounds(x+15,515,108,82);
     }
-    enabled.setBounds(36,711,116,27);
-    dynamic.setBounds(164,711,116,27);
-    bypass.setBounds(291,711,100,27);
-    sendLabel.setBounds(430,700,160,18);send.setBounds(430,720,158,30);
-    listenLabel.setBounds(610,700,182,18);listen.setBounds(610,720,186,30);
-    outLabel.setBounds(1040,694,100,18);output.setBounds(1050,704,105,69);
+    enabled.setBounds(36,608,116,25);
+    dynamic.setBounds(164,608,116,25);
+    bypass.setBounds(291,608,100,25);
+    sendLabel.setBounds(430,597,160,16);send.setBounds(430,613,158,26);
+    listenLabel.setBounds(610,597,182,16);listen.setBounds(610,613,186,26);
+    outLabel.setBounds(1121,578,100,15);output.setBounds(1124,589,104,52);
     updateFloatingPanel();
 }
 juce::Rectangle<int> CetusproEQAudioProcessorEditor::hudBounds() const{
     const auto plot=graphPlot().toFloat();
-    const int w=246,h=96;
+    const int w=230,h=84;
     const float nx=freqX(processor.getBandFrequency(selected));
     const float ny=gainY(processor.getBandGain(selected)+processor.getBandDynGain(selected));
     const int x=juce::jlimit(juce::roundToInt(plot.getX()),juce::roundToInt(plot.getRight())-w,
          juce::roundToInt(nx-w*0.5f));
-    const float desired=(ny>plot.getCentreY()?ny-h-20.0f:ny+23.0f);
+    const float desired=(ny>plot.getCentreY()?ny-h-16.0f:ny+18.0f);
     const int y=juce::jlimit(juce::roundToInt(plot.getY()),juce::roundToInt(plot.getBottom())-h,juce::roundToInt(desired));
     return {x,y,w,h};
 }
 void CetusproEQAudioProcessorEditor::updateFloatingPanel(){
+    type.setVisible(hudVisible);
+    if(!hudVisible)return;
     const auto r=hudBounds();
-    type.setBounds(r.getX()+12,r.getY()+34,r.getWidth()-24,28);
+    type.setBounds(r.getX()+12,r.getY()+30,r.getWidth()-24,27);
 }
 void CetusproEQAudioProcessorEditor::updateSpectrum(){
     if(!analyzerOn||!processor.copySpectrum(fftTime,postSpectrum))return;
@@ -211,16 +215,18 @@ void CetusproEQAudioProcessorEditor::mouseDown(const juce::MouseEvent& e){
         const float dist=dx*dx+dy*dy;
         if(dist<best){pick=b;best=dist;}
     }
-    if(pick<0)return;
+    if(pick<0){hudVisible=false;updateFloatingPanel();repaint();return;}
+    hudVisible=true;
     selectBand(pick);dragging=true;
+    dragOrigin=e.position;
     dragFreq=processor.parameters.getParameter(CetusproEQAudioProcessor::param(pick,"freq"));
     dragGain=processor.parameters.getParameter(CetusproEQAudioProcessor::param(pick,"gain"));
     if(dragFreq)dragFreq->beginChangeGesture();
     if(dragGain)dragGain->beginChangeGesture();
-    mouseDrag(e);
 }
+
 void CetusproEQAudioProcessorEditor::mouseDrag(const juce::MouseEvent& e){
-    if(!dragging)return;
+    if(!dragging || e.position.getDistanceFrom(dragOrigin)<4.0f)return;
     setFromGraph(dragFreq,xFreq(e.position.x));
     setFromGraph(dragGain,yGain(e.position.y)-processor.getBandDynGain(selected));
     updateFloatingPanel();
@@ -244,7 +250,7 @@ void CetusproEQAudioProcessorEditor::mouseDoubleClick(const juce::MouseEvent& e)
         }
     };
     set("on",1.0f);set("freq",xFreq(e.position.x));set("gain",yGain(e.position.y));
-    selectBand(target);
+    hudVisible=true;selectBand(target);
 }
 void CetusproEQAudioProcessorEditor::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheelDetails& wheel){
     if(!graphPlot().contains(e.getPosition()))return juce::AudioProcessorEditor::mouseWheelMove(e,wheel);
@@ -256,7 +262,7 @@ void CetusproEQAudioProcessorEditor::mouseWheelMove(const juce::MouseEvent& e,co
 void CetusproEQAudioProcessorEditor::paint(juce::Graphics& g){
     g.fillAll(bg);
     g.setColour(panel);g.fillRoundedRectangle(16.0f,16.0f,1248.0f,58.0f,11.0f);
-    g.fillRoundedRectangle(24.0f,500.0f,1232.0f,264.0f,11.0f);
+    g.fillRoundedRectangle(24.0f,448.0f,1232.0f,193.0f,11.0f);
     g.setColour(cyan);g.fillEllipse(28.0f,31.0f,30.0f,30.0f);
     g.setColour(bg);g.fillEllipse(36.0f,25.0f,30.0f,30.0f);
     g.setColour(ivory);g.setFont(juce::FontOptions(13.0f,juce::Font::bold));
@@ -265,14 +271,14 @@ void CetusproEQAudioProcessorEditor::paint(juce::Graphics& g){
     g.drawText("cetuspro",254,23,170,34,juce::Justification::centredLeft);
     g.setColour(cyan);g.drawText("EQ",418,23,45,34,juce::Justification::centredLeft);
     g.setColour(muted);g.setFont(juce::FontOptions(11.0f));
-    g.drawText("8 BAND   /   DYNAMIC EQUALIZER   v0.4",478,33,302,23,juce::Justification::centredLeft);
+    g.drawText("8 BAND   /   DYNAMIC EQUALIZER   v0.4.1",478,33,302,23,juce::Justification::centredLeft);
     drawGraph(g);drawOutput(g);
     g.setColour(ivory);g.setFont(juce::FontOptions(12.0f));
-    g.drawText("8 BAND FILTERS    •    DRAG NODE TO EDIT     •    MOUSE WHEEL = Q",32,486,845,16,juce::Justification::centredLeft);
+    g.drawText("8 BAND FILTERS   |   DRAG NODE TO EDIT   |   MOUSE WHEEL = Q",32,431,845,15,juce::Justification::centredLeft);
     g.setColour(muted);
-    g.drawText("CETUS LINK SIDECHAIN: SEND on source track, LISTEN on destination",33,755,735,18,juce::Justification::centredLeft);
+    g.drawText("CETUS LINK: SEND on source track, LISTEN on destination",33,643,735,14,juce::Justification::centredLeft);
     g.setColour(cyan);
-    g.drawText("CETUS PRODUCTION  /  v0.4",994,755,247,18,juce::Justification::centredRight);
+    g.drawText("CETUS PRODUCTION  /  v0.4.1",994,643,247,14,juce::Justification::centredRight);
 }
 void CetusproEQAudioProcessorEditor::drawGraph(juce::Graphics& g){
     const auto region=graphBounds();const auto plot=graphPlot().toFloat();
@@ -360,6 +366,7 @@ void CetusproEQAudioProcessorEditor::drawGraph(juce::Graphics& g){
     }
     for(float d:{18.f,12.f,6.f,0.f,-6.f,-12.f,-18.f})
         g.drawText((d>0?"+":"")+juce::String(d,0),region.getX()+2,juce::roundToInt(gainY(d))-8,30,17,juce::Justification::centred);
+    if(hudVisible){
     const auto hud=hudBounds();
     g.setColour(bg.withAlpha(.85f));g.fillRoundedRectangle(hud.translated(0,4).toFloat(),10.0f);
     g.setColour(juce::Colour::fromRGB(34,48,62));g.fillRoundedRectangle(hud.toFloat(),10.0f);
@@ -369,7 +376,8 @@ void CetusproEQAudioProcessorEditor::drawGraph(juce::Graphics& g){
          hud.getX()+12,hud.getY()+6,hud.getWidth()-22,20,juce::Justification::centredLeft);
     g.setColour(muted);g.setFont(juce::FontOptions(10.5f));
     g.drawText("DYNAMIC "+juce::String(processor.getBandDynGain(selected),1)+" dB",
-         hud.getX()+12,hud.getBottom()-23,hud.getWidth()-22,18,juce::Justification::centredLeft);
+         hud.getX()+12,hud.getBottom()-22,hud.getWidth()-22,17,juce::Justification::centredLeft);
+    }
     g.drawText("STATIC",region.getX()+15,region.getY()+7,62,14,juce::Justification::centredLeft);
     g.setColour(amber);g.fillRect(region.getX()+72,region.getY()+12,32,2);
     g.setColour(cyan);g.fillRect(region.getX()+109,region.getY()+12,32,2);
