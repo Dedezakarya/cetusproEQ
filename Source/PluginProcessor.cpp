@@ -19,9 +19,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout CetusproEQAudioProcessor::cr
         layout.add(std::make_unique<APF>(juce::ParameterID(id,1), id,
             juce::NormalisableRange<float>(low, high, step, skew), def));
     };
-    for (int b=0; b<6; ++b) {
+    for (int b=0; b<numBands; ++b) {
         auto id = [b](const char* s) { return param(b,s); };
-        const float freqs[6] = { 80, 180, 500, 1500, 4000, 10000 };
+        const float freqs[numBands] = { 35, 80, 180, 420, 1000, 2500, 6000, 12000 };
         makeF(id("freq"), 20, 20000, freqs[b], 0.01f, 0.28f);
         makeF(id("gain"), -18, 18, 0);
         makeF(id("q"), 0.2f, 12, 1, 0.01f, 0.5f);
@@ -29,6 +29,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout CetusproEQAudioProcessor::cr
         makeF(id("range"), -18, 18, 0);
         makeF(id("atk"), 0.1f, 200, 10, 0.1f, 0.45f);
         makeF(id("rel"), 5, 1000, 150, 0.1f, 0.45f);
+        layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID(id("type"),1), id("type"),
+            juce::StringArray{"Bell","Low Shelf","High Shelf","High Pass","Low Pass","Notch"},0));
         layout.add(std::make_unique<APB>(juce::ParameterID(id("on"),1), id("on"), true));
         layout.add(std::make_unique<APB>(juce::ParameterID(id("dyn"),1), id("dyn"), false));
     }
@@ -57,6 +59,7 @@ void CetusproEQAudioProcessor::prepareToPlay(double rate, int) {
     spectrumAfterCount.store(0, std::memory_order_relaxed);
     lastLinkUpdate = 0;
     outputLevel = 0.0f;
+    for (auto& gain : meterDynamicGain) gain.store(0.0f, std::memory_order_relaxed);
     for (auto& band : bands) {
         band.envelope=0;
         band.smoothedGain=0;
@@ -84,6 +87,7 @@ void CetusproEQAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
     const int sendBus = juce::roundToInt(parameters.getRawParameterValue("send")->load());
     if (sendBus > 0) CetusLink::send(sendBus, inputPeak);
     if (parameters.getRawParameterValue("bypass")->load() > 0.5f) {
+        for (auto& gain : meterDynamicGain) gain.store(0.0f, std::memory_order_relaxed);
         captureSpectrum(main, channels, true);
         return;
     }
@@ -106,18 +110,26 @@ void CetusproEQAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
     const float blockDuration = static_cast<float>(samples / currentSampleRate);
         const float nyquist = static_cast<float>(currentSampleRate * 0.5);
 
-    for (int i=0; i<6; ++i) {
+    for (int i=0; i<numBands; ++i) {
         auto& b = bands[static_cast<size_t>(i)];
-        if (parameters.getRawParameterValue(param(i,"on"))->load() < 0.5f) continue;
+        if (parameters.getRawParameterValue(param(i,"on"))->load() < 0.5f) {
+            meterDynamicGain[static_cast<size_t>(i)].store(0.0f, std::memory_order_relaxed);
+            b.smoothedGain = 0;
+            for (auto& f : b.filter) f.reset();
+            continue;
+        }
         const float freq=juce::jlimit(20.0f,nyquist*0.95f,parameters.getRawParameterValue(param(i,"freq"))->load());
         const float q=parameters.getRawParameterValue(param(i,"q"))->load();
         const float staticGain=parameters.getRawParameterValue(param(i,"gain"))->load();
         const float threshold=parameters.getRawParameterValue(param(i,"thr"))->load();
         const float range=parameters.getRawParameterValue(param(i,"range"))->load();
-        const bool dynamicEnabled = parameters.getRawParameterValue(param(i,"dyn"))->load() > 0.5f && std::abs(range) > 0.0001f;
+        const int type=juce::roundToInt(parameters.getRawParameterValue(param(i,"type"))->load());
+        const bool dynamicEnabled = CetusEQ::canProcessDynamics(type)
+            && parameters.getRawParameterValue(param(i,"dyn"))->load() > 0.5f && std::abs(range) > 0.0001f;
         // A genuinely flat band MUST NOT colour audio. Skip the IIR entirely.
-        if (std::abs(staticGain) < 0.0001f && !dynamicEnabled && std::abs(b.smoothedGain) < 0.001f) {
+        if (CetusEQ::canProcessDynamics(type) && std::abs(staticGain) < 0.0001f && !dynamicEnabled && std::abs(b.smoothedGain) < 0.001f) {
             b.smoothedGain = 0.0f;
+            meterDynamicGain[static_cast<size_t>(i)].store(0.0f, std::memory_order_relaxed);
             for (auto& filter : b.filter) filter.reset();
             continue;
         }
@@ -138,8 +150,9 @@ void CetusproEQAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
         // Smoothing avoids abrupt jumps on transport and automation edits.
         const float smoothing = std::exp(-blockDuration / 0.015f);
         b.smoothedGain = smoothing*b.smoothedGain + (1.0f-smoothing)*desiredGain;
-        auto coeff = juce::dsp::IIR::Coefficients<float>::makePeakFilter(currentSampleRate, freq, q,
-            juce::Decibels::decibelsToGain(b.smoothedGain));
+        meterDynamicGain[static_cast<size_t>(i)].store(dynamicEnabled ? (b.smoothedGain - staticGain) : 0.0f,
+            std::memory_order_relaxed);
+        auto coeff = CetusEQ::makeCoefficients(currentSampleRate, freq, q, b.smoothedGain, type);
         for (int c=0;c<channels;++c) {
             b.filter[static_cast<size_t>(c)].coefficients = coeff;
             auto* data=main.getWritePointer(c);
@@ -180,7 +193,7 @@ bool CetusproEQAudioProcessor::copySpectrum(std::array<float,spectrumSize>& samp
 }
 
 void CetusproEQAudioProcessor::resetFlat() {
-    const float frequencies[6] = { 80, 180, 500, 1500, 4000, 10000 };
+    const float frequencies[numBands] = { 35, 80, 180, 420, 1000, 2500, 6000, 12000 };
     auto assign = [this](const juce::String& id, float actual) {
         if (auto* p = parameters.getParameter(id)) {
             p->beginChangeGesture();
@@ -188,8 +201,9 @@ void CetusproEQAudioProcessor::resetFlat() {
             p->endChangeGesture();
         }
     };
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < numBands; ++i) {
         assign(param(i,"freq"),frequencies[i]);
+        assign(param(i,"type"),0);
         assign(param(i,"gain"),0);
         assign(param(i,"q"),1);
         assign(param(i,"thr"),-24);
