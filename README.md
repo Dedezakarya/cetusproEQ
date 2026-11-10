@@ -1,55 +1,39 @@
-# cetusproEQ v0.1 — Cetus Production
+# cetusproEQ v0.4 — Cetus Production
 
-> **Build otomatis Windows/macOS:** baca [`docs/NATIVE-BUILD.md`](docs/NATIVE-BUILD.md). Workflow GitHub Actions ada di `.github/workflows/build-plugins.yml`. Arsip source ini **bukan** binary `.vst3`/`.component`.
+Experimental 8-band Dynamic EQ, JUCE 8 + C++17, built as AU (macOS) and VST3 (macOS/Windows).
 
-Cross-platform 6-band dynamic peak EQ with **Cetus Link** in-process detector sidechain, optional DAW sidechain bus, AU (macOS), VST3 (macOS/Windows) and Standalone.
+## v0.4 features
+- 8 independently adjustable bands
+- Bell, Low Shelf, High Shelf, High Pass, Low Pass, Notch selectable per band
+- Dynamic gain on Bell / Low Shelf / High Shelf (not on HPF, LPF or Notch)
+- Live PRE/POST FFT analyzer, static and active EQ curves from actual biquad response
+- Coloured dynamic response overlay, floating selected-band filter selector (HUD)
+- Drag node to edit Frequency/Gain, wheel over graph to adjust Q, double-click graph to activate an unused band or retune selected
+- Cetus Link Send 1–4, listen to other instance within one DAW process, or DAW external sidechain input
+- INIT FLAT transparent default; dynamic is OFF and range is zero on all bands
 
-## Build requirements
-- JUCE 8 (project fetch defaults to tag 8.0.10; alternatively pass `-DJUCE_PATH=/path/to/JUCE`)
-- CMake 3.22+, C++17 compiler
-- macOS: Xcode and command-line tools; Windows: Visual Studio 2022 with Desktop C++ workload
-- Internet to fetch JUCE, unless `JUCE_PATH` provided
-
-### Windows PowerShell
+## Build
+Requires CMake >=3.22, JUCE 8 (fetched as 8.0.10) and native C++ build tools.
+Windows:
 ```powershell
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release --target cetusproEQ_VST3 cetusproEQ_Standalone
+cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64
+cmake --build build-win --config Release --target cetusproEQ_VST3
 ```
-Build artifacts: `build/cetusproEQ_artefacts/Release/VST3/` and `.../Standalone/`.
-
-### macOS
+macOS:
 ```bash
-cmake -S . -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-cmake --build build --config Release --target cetusproEQ_VST3 cetusproEQ_AU cetusproEQ_Standalone
+cmake -S . -B build-mac -G Xcode -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+cmake --build build-mac --config Release --target cetusproEQ_AU cetusproEQ_VST3
 ```
-If you only have an Intel Mac, use `-DCMAKE_OSX_ARCHITECTURES=x86_64`. Artifacts: `build/cetusproEQ_artefacts/Release/`.
 
-### Install (manual)
-- Windows VST3: copy `cetusproEQ.vst3` folder to `C:\Program Files\Common Files\VST3\`
-- macOS VST3: copy to `~/Library/Audio/Plug-Ins/VST3/`
-- macOS AU: copy `cetusproEQ.component` to `~/Library/Audio/Plug-Ins/Components/`
-- Restart DAW or rescan plugins. Unsigned macOS bundles may require local development signing and Gatekeeper handling.
+The `.github/workflows/build-plugins.yml` runs native CI builds on GitHub.
 
-## Using Cetus Link across tracks
-1. Track A: insert cetusproEQ; set SEND = Link 1. The source detector is the **incoming** audio peak before processing.
-2. Track B: insert cetusproEQ; set DETECTOR SOURCE = Link 1.
-3. In Track B choose a band, enable DYNAMIC and set threshold, range **negative** to attenuate when A rises, attack/release.
-4. Set other bands or use different links (1–4). One transmitter per link. **Cross-instance operation works only when both plugin instances reside in the same DAW process/plugin binary module.** It will not work across sandboxed AU processes or separated plugin bridge processes.
-5. Processing order is host-controlled; detector communication is block-oriented and can incur a block of offset. This is not guaranteed sample-accurate, and DAW delay compensation does not account for the link.
+## Testing & limitations
+- This is prototype audio software, not a FabFilter clone or production-ready replacement.
+- Unlike FabFilter Pro-Q, filters are 2nd-order and detector is broadband block-based. No linear-phase mode, per-band detector filters, oversampling or AAX.
+- Dynamic graph reflects current smoothed gain, not a sample-accurate waveform history.
+- Cetus Link shares detector peak levels only, not audio; it depends on host processing order and same-process plugin instances.
+- Windows VST3 and macOS AU/VST3 builds must be tested in a DAW; on macOS builds are ad-hoc signed, not notarized.
+- Existing plugin instances can restore old parameters. Use INIT FLAT for a genuinely neutral baseline.
+- Review JUCE licensing before commercial distribution.
 
-## DAW sidechain alternative
-Set DETECTOR SOURCE = DAW sidechain, enable the second input bus in the host, and route audio to it. Host support varies. This can work where in-process Cetus Link cannot. This plugin does not intentionally pass sidechain audio into output.
-
-## Controls and DSP
-Each of 6 **bell/peaking** bands has: frequency, static gain, Q, threshold, signed dynamic range, attack, release, enable and dynamic switch. All bands share one detector source (Self / Link 1–4 / DAW sidechain). Signed range: negative = downward dynamic cut, positive = dynamic boost *above* threshold. State saved/restored with host project. Bypass and output gain included.
-
-DSP is a prototype: block-level peak detection and coefficient update, not sample-accurate automation or production-grade artifact suppression. The GUI shows an approximate static EQ curve (not FFT analysis). No external sidechain audio streaming, no cross-process link, no AAX, no HPF/shelf/notch, no linear phase, no oversampling, no factory preset browser yet.
-
-## Known limitations and test checklist
-- Link bus stores the latest peak only. If no sender posts before a receiver callback, the receiver reads 0 for that callback; host processing order influences behavior. No multiple concurrent senders per bus.
-- Verify builds, plugin scan, mono/stereo, sample rates (44.1/48/96 kHz), silent input, high Q, rapid parameter automation, project save/reopen, standalone.
-- Ensure host sidechain bus is enabled when using DAW mode.
-- JUCE licensing and third-party dependencies must be reviewed before commercial release: https://juce.com/legal/juce-8-licence/
-- For shipping: parameter smoothing per sample, gain/lookahead options, frequency-selective detectors, analyzer, stress tests, and validation/codesigning are recommended.
-
-Copyright © 2026 Cetus Production. Source supplied for project development; see JUCE licensing for the framework.
+© 2026 Cetus Production.
