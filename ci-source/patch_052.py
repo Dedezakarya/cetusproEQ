@@ -3,8 +3,8 @@ import shutil
 dst=Path('.')
 h=dst/'Source/PluginEditor.h'
 c=dst/'Source/PluginEditor.cpp'
-hs=h.read_text()
-cs=c.read_text()
+hs=h.read_text(encoding='utf-8')
+cs=c.read_text(encoding='utf-8')
 def repl(s, a,b):
  if a not in s: raise RuntimeError('NOT FOUND '+a[:120])
  return s.replace(a,b,1)
@@ -268,12 +268,12 @@ cs=cs.replace('outputLabel.setBounds(962,388,88,19);','outputLabel.setBounds(962
 # hide send/listen labels since drawn by drawBottom
 cs=cs.replace('sendLabel.setBounds(519,373,103,15);','sendLabel.setBounds(519,373,103,15);sendLabel.setVisible(false);')
 cs=cs.replace('listenLabel.setBounds(644,373,116,15);','listenLabel.setBounds(644,373,116,15);listenLabel.setVisible(false);')
-h.write_text(hs)
-c.write_text(cs)
+h.write_text(hs, encoding='utf-8')
+c.write_text(cs, encoding='utf-8')
 cm=dst/'CMakeLists.txt'
-cm.write_text(cm.read_text().replace('VERSION 0.5.1','VERSION 0.5.2'))
+cm.write_text(cm.read_text(encoding='utf-8').replace('VERSION 0.5.1','VERSION 0.5.2'), encoding='utf-8')
 workflow=dst/'.github/workflows/build-plugins.yml'
-w=workflow.read_text().replace('"feature/cetusproeq-v0.5.1-polish"','"feature/cetusproeq-v0.5.2-compact-3d"').replace('v0.5.1','v0.5.2')
-workflow.write_text(w)
-(dst/'README.md').write_text((dst/'README.md').read_text()+'''\n\n## v0.5.2 compact 3D visual pass\n- Editor resized to 1080 × 594 for laptop screens (original was 1180 × 642).\n- Glossy/gradient 3D header buttons and metallic rotary controls; functional icon Save/Open/Undo/Redo controls.\n- Output meter with labelled 0, −6, −12, −24, −36, −48, −60 dB ticks, plus numeric peak.\n- Lower panel rebuilt with non-overlapping controls and labels.\n- DSP C++ unchanged; stereo, mid/side, 8 bands and filter slopes retained.\n''')
+w=workflow.read_text(encoding='utf-8').replace('"feature/cetusproeq-v0.5.1-polish"','"feature/cetusproeq-v0.5.2-compact-3d"').replace('v0.5.1','v0.5.2')
+workflow.write_text(w, encoding='utf-8')
+(dst/'README.md').write_text((dst/'README.md').read_text(encoding='utf-8')+'''\n\n## v0.5.2 compact 3D visual pass\n- Editor resized to 1080 × 594 for laptop screens (original was 1180 × 642).\n- Glossy/gradient 3D header buttons and metallic rotary controls; functional icon Save/Open/Undo/Redo controls.\n- Output meter with labelled 0, −6, −12, −24, −36, −48, −60 dB ticks, plus numeric peak.\n- Lower panel rebuilt with non-overlapping controls and labels.\n- DSP C++ unchanged; stereo, mid/side, 8 bands and filter slopes retained.\n''', encoding='utf-8')
 print('Applied compact 3D visual patch v0.5.2:', len(cs), 'chars in editor')
