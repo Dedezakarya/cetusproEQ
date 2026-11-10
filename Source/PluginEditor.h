@@ -38,6 +38,8 @@ private:
     std::unique_ptr<ComboAttachment> sendAttachment,listenAttachment,typeAttachment;
     int selected=0;
     bool analyzerOn=true,postSpectrum=true,hasSpectrum=false,dragging=false;
+    bool hudVisible=false;
+    juce::Point<float> dragOrigin;
     juce::RangedAudioParameter* dragFreq=nullptr;
     juce::RangedAudioParameter* dragGain=nullptr;
     juce::dsp::FFT fft {CetusproEQAudioProcessor::spectrumOrder};
@@ -56,7 +58,7 @@ private:
     void drawOutput(juce::Graphics&);
     void updateFloatingPanel();
     void setFromGraph(juce::RangedAudioParameter*,float);
-    juce::Rectangle<int> graphBounds() const {return {24,90,getWidth()-152,390};}
+    juce::Rectangle<int> graphBounds() const {return {24,84,getWidth()-152,345};}
     juce::Rectangle<int> graphPlot() const {return graphBounds().reduced(36,27).withTrimmedBottom(8);}
     juce::Rectangle<int> hudBounds() const;
     float freqX(float) const;
