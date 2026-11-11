@@ -10,15 +10,15 @@ methods=json.loads(lzma.decompress(base64.b64decode(PAYLOAD)))
 
 def replace_method(source,name,body):
     if name=="CetusproEQAudioProcessorEditor":
-        pattern=r"CetusproEQAudioProcessorEditor::CetusproEQAudioProcessorEditor\\s*\\("
+        pattern=r"CetusproEQAudioProcessorEditor::CetusproEQAudioProcessorEditor\s*\("
     elif name=="CetusLookAndFeel::CetusLookAndFeel":
-        pattern=r"CetusproEQAudioProcessorEditor::CetusLookAndFeel::CetusLookAndFeel\\s*\\("
+        pattern=r"CetusproEQAudioProcessorEditor::CetusLookAndFeel::CetusLookAndFeel\s*\("
     else:
-        pattern=r"(?:void|juce::Font)\\s+CetusproEQAudioProcessorEditor::(?:CetusLookAndFeel::)?"+re.escape(name)+r"\\s*\\("
+        pattern=r"(?:void|juce::Font)\s+CetusproEQAudioProcessorEditor::(?:CetusLookAndFeel::)?"+re.escape(name)+r"\s*\("
     match=re.search(pattern,source)
     if not match:
         raise SystemExit("Missing GUI function: "+name)
-    start=source.rfind("\\n",0,match.start())+1
+    start=source.rfind("\n",0,match.start())+1
     opening=source.index("{",match.end())
     depth=0
     for end in range(opening,len(source)):
