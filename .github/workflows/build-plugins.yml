@@ -3,7 +3,7 @@ name: Build cetusproEQ VST3 + AU
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, 'feature/cetusproeq-v0.4-proworkflow', 'feature/cetusproeq-v0.5.1-native-build', 'feature/cetusproeq-v0.5.3-compact-3d', 'feature/cetusproeq-v0.5.3-glass-ui-build', 'feature/cetusproeq-v0.5.4-brushed-metal', 'feature/cetusproeq-v0.5.5-soft-metal', 'feature/cetusproeq-v0.5.6-metal-spectrum-ui', 'feature/cetusproeq-v0.5.7-dark-compact-ui', 'feature/cetusproeq-v0.5.8-layout-fix' ]
+    branches: [ main, master, 'feature/cetusproeq-v0.4-proworkflow', 'feature/cetusproeq-v0.5.1-native-build', 'feature/cetusproeq-v0.5.3-compact-3d', 'feature/cetusproeq-v0.5.3-glass-ui-build', 'feature/cetusproeq-v0.5.4-brushed-metal', 'feature/cetusproeq-v0.5.5-soft-metal', 'feature/cetusproeq-v0.5.6-metal-spectrum-ui', 'feature/cetusproeq-v0.5.7-dark-compact-ui', 'feature/cetusproeq-v0.5.8-layout-fix', 'feature/cetusproeq-v0.5.9-compact-branding' ]
   pull_request:
     branches: [ main ]
 
@@ -34,8 +34,10 @@ jobs:
         run: python ci-source/apply_057.py
       - name: Repair child component coordinate scaling v0.5.8 (GUI-only)
         run: python ci-source/apply_058.py
+      - name: Apply v0.5.9 user-supplied branding and compact UI (GUI-only)
+        run: python ci-source/apply_059.py
       - name: Validate version and immutable DSP
-        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.8' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.8 source verified')"
+        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.9' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.9 source verified')"
       - name: Tool versions
         shell: pwsh
         run: |
@@ -57,13 +59,13 @@ jobs:
           if (-not @(Get-ChildItem -LiteralPath $bundle -Recurse -File -Filter *.vst3).Count) {
             throw "Built VST3 bundle has no .vst3 module: $bundle"
           }
-          Compress-Archive -LiteralPath $bundle -DestinationPath dist/cetusproEQ-v0.5.8-Windows-x64-VST3.zip -CompressionLevel Optimal -Force
+          Compress-Archive -LiteralPath $bundle -DestinationPath dist/cetusproEQ-v0.5.9-Windows-x64-VST3.zip -CompressionLevel Optimal -Force
           Get-Item dist/*.zip | Select-Object Name,Length
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cetusproEQ-v0.5.8-Windows-x64-VST3
-          path: dist/cetusproEQ-v0.5.8-Windows-x64-VST3.zip
+          name: cetusproEQ-v0.5.9-Windows-x64-VST3
+          path: dist/cetusproEQ-v0.5.9-Windows-x64-VST3.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -90,8 +92,10 @@ jobs:
         run: python ci-source/apply_057.py
       - name: Repair child component coordinate scaling v0.5.8 (GUI-only)
         run: python ci-source/apply_058.py
+      - name: Apply v0.5.9 user-supplied branding and compact UI (GUI-only)
+        run: python ci-source/apply_059.py
       - name: Validate version and immutable DSP
-        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.8' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.8 source verified')"
+        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.9' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.9 source verified')"
       - name: Tool versions
         run: |
           cmake --version
@@ -124,13 +128,13 @@ jobs:
           xcrun lipo "$au/Contents/MacOS/cetusproEQ" -verify_arch arm64
           codesign --force --deep --sign - "$vst"
           codesign --force --deep --sign - "$au"
-          ditto -c -k --sequesterRsrc --keepParent "$vst" dist/cetusproEQ-v0.5.8-macOS-Universal-VST3.zip
-          ditto -c -k --sequesterRsrc --keepParent "$au" dist/cetusproEQ-v0.5.8-macOS-Universal-AU.zip
+          ditto -c -k --sequesterRsrc --keepParent "$vst" dist/cetusproEQ-v0.5.9-macOS-Universal-VST3.zip
+          ditto -c -k --sequesterRsrc --keepParent "$au" dist/cetusproEQ-v0.5.9-macOS-Universal-AU.zip
           ls -lh dist/*.zip
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cetusproEQ-v0.5.8-macOS-Universal-AU-and-VST3
+          name: cetusproEQ-v0.5.9-macOS-Universal-AU-and-VST3
           path: dist/*.zip
           if-no-files-found: error
           retention-days: 30
