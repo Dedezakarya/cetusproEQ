@@ -3,7 +3,7 @@
 from pathlib import Path
 
 editor = Path("Source/PluginEditor.cpp")
-data = editor.read_bytes().decode("latin-1")
+data = editor.read_bytes().decode("latin-1").replace("\r\n", "\n").replace("\r", "\n")
 
 def one(old, new):
     global data
