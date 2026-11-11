@@ -11,36 +11,29 @@ changes = json.loads(lzma.decompress(base64.b64decode(payload)))
 for name, item in changes.items():
     path = Path(name)
     original = path.read_bytes()
+    # Normalise three known v0.5.5 CI differences; the result must match
+    # the exact original source hash before any GUI patch can be applied.
+    if name.endswith("CetusMetalSkin.h"):
+        original = original.replace(b"\r\n", b"\n")
+    elif name.endswith("PluginEditor.cpp"):
+        original = original.replace(
+            b"// Vertical light, fine brushed steel; no diagonal highlights or stripes.",
+            b"// Evenly lit brushed steel; no diagonal specular reflections or stripe overlays."
+        )
+        original = original.replace(
+            b"if(type!=currentFilterType){setKnobType();if(hudPinned)bindFloatingControls(selectedBand);}",
+            b"if(type!=currentFilterType){\n        setKnobType();\n        if(hudPinned)bindFloatingControls(selectedBand);\n    }"
+        )
+        original = original.replace(b"  \xb7  ", b"  \xc2\xb7  ")
     digest = hashlib.sha256(original).hexdigest()
-    lines = original.splitlines(keepends=True)
-    expected_lines = {"Source/PluginEditor.cpp": 961, "Source/CetusMetalSkin.h": 96}[name]
-    expected_size = {"Source/PluginEditor.cpp": 54468, "Source/CetusMetalSkin.h": 4630}[name]
     if digest != item["before"]:
-        # The older CI pipeline writes editor bytes with small platform-dependent
-        # encoding differences; the unchanged line structure must still match.
-        if len(lines) != expected_lines or abs(len(original)-expected_size) > 64:
-            raise SystemExit(f"Unexpected GUI source layout {name}: {len(lines)} lines and {len(original)} bytes")
-        print(f"Compatible v0.5.5 {name}: {digest} ({len(lines)} lines).")
-
+        raise SystemExit(f"Unexpected v0.5.5 GUI source {name}: {digest}, expected {item['before']}")
+    lines = original.splitlines(keepends=True)
     for start, end, replacement in reversed(item["ops"]):
         lines[start:end] = base64.b64decode(replacement).splitlines(keepends=True)
     updated = b"".join(lines)
-    result_sha = hashlib.sha256(updated).hexdigest()
-    if result_sha != item["after"]:
-        # Exact hash may vary because a few source bytes differ across platforms.
-        # Verify that the requested UI-specific changes exist in the output.
-        if name.endswith("PluginEditor.cpp") and not (
-            b"std::vector<juce::Point<float>> points" in updated and
-            b"const float zeroY = gainY(0.0f);" in updated and
-            b'v0.5.6' in updated and b"drawRotarySlider" in updated
-        ):
-            raise SystemExit(f"Missing revised GUI content: {name}")
-        if name.endswith("CetusMetalSkin.h") and not (
-            b"machinedKnob" in updated and b"brushedSurface" in updated and
-            b"ColourGradient gloss" in updated
-        ):
-            raise SystemExit(f"Missing revised metallic skin: {name}")
-        print(f"Portable {name} hash: {result_sha}")
+    if hashlib.sha256(updated).hexdigest() != item["after"]:
+        raise SystemExit(f"Output source checksum mismatch: {name}")
     path.write_bytes(updated)
     print(f"Applied GUI-only patch {name}: {len(original)} -> {len(updated)} bytes")
 
