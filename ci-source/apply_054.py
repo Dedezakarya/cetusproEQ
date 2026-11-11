@@ -3,7 +3,7 @@
 from pathlib import Path
 
 editor = Path("Source/PluginEditor.cpp")
-data = editor.read_text(encoding="utf-8")
+data = editor.read_bytes().decode("latin-1")
 
 def one(old, new):
     global data
@@ -28,7 +28,7 @@ one('    g.setGradientFill(chrome);g.fillRoundedRectangle(h,10.0f);',
     '    CetusMetal::brushedSurface(g,h,10.0f,0.65f);')
 if "v0.5.3" not in data:
     raise RuntimeError("Missing original GUI version")
-editor.write_text(data.replace("v0.5.3", "v0.5.4"), encoding="utf-8")
+editor.write_bytes(data.replace("v0.5.3", "v0.5.4").encode("latin-1"))
 
 cmake = Path("CMakeLists.txt")
 cm = cmake.read_text(encoding="utf-8")
