@@ -34,6 +34,7 @@ source=path.read_text(encoding="utf-8")
 for name,body in methods.items():
     source=replace_method(source,name,body)
     print("Updated UI method:",name)
+source=source.replace("juce::RectanglePlacement::centredLeft","juce::RectanglePlacement::centred")
 path.write_text(source,encoding="utf-8")
 
 cpath=Path("CMakeLists.txt")
