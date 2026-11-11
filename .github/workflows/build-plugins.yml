@@ -40,6 +40,15 @@ jobs:
         run: python ci-source/apply_05101.py
       - name: Apply v0.5.11 graphite knobs, coloured indicators and branded header (GUI-only)
         run: python ci-source/apply_0511.py
+      - name: Capture exact v0.5.11 generated editor for compatibility check
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre0512-source-${{ runner.os }}
+          path: |
+            Source/PluginEditor.cpp
+            Source/PluginEditor.h
+            CMakeLists.txt
+          retention-days: 1
       - name: Apply verified v0.5.12 GUI-only layout and switch patch
         run: python ci-source/apply_0512.py
       - name: Verify v0.5.12 source and original audio DSP
@@ -106,6 +115,15 @@ jobs:
         run: python ci-source/apply_05101.py
       - name: Apply v0.5.11 graphite knobs, coloured indicators and branded header (GUI-only)
         run: python ci-source/apply_0511.py
+      - name: Capture exact v0.5.11 generated editor for compatibility check
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre0512-source-${{ runner.os }}
+          path: |
+            Source/PluginEditor.cpp
+            Source/PluginEditor.h
+            CMakeLists.txt
+          retention-days: 1
       - name: Apply verified v0.5.12 GUI-only layout and switch patch
         run: python ci-source/apply_0512.py
       - name: Verify v0.5.12 source and original audio DSP
