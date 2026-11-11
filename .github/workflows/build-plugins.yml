@@ -28,6 +28,14 @@ jobs:
         run: python ci-source/apply_054.py
       - name: Apply v0.5.5 subtle metal UI patch (SHA256 verified)
         run: python ci-source/apply_055.py
+      - name: Export v0.5.5 GUI baseline for patch compatibility
+        uses: actions/upload-artifact@v4
+        with:
+          name: cetus-source-baseline-${{ runner.os }}
+          path: |
+            Source/PluginEditor.cpp
+            Source/CetusMetalSkin.h
+          retention-days: 1
       - name: Apply v0.5.6 metallic controls, coloured curves and smoothed spectrum (GUI-only)
         run: python ci-source/apply_056.py
       - name: Validate version and immutable DSP
@@ -80,6 +88,14 @@ jobs:
         run: python ci-source/apply_054.py
       - name: Apply v0.5.5 subtle metal UI patch (SHA256 verified)
         run: python ci-source/apply_055.py
+      - name: Export v0.5.5 GUI baseline for patch compatibility
+        uses: actions/upload-artifact@v4
+        with:
+          name: cetus-source-baseline-${{ runner.os }}
+          path: |
+            Source/PluginEditor.cpp
+            Source/CetusMetalSkin.h
+          retention-days: 1
       - name: Apply v0.5.6 metallic controls, coloured curves and smoothed spectrum (GUI-only)
         run: python ci-source/apply_056.py
       - name: Validate version and immutable DSP
