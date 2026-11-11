@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Apply verified cetusproEQ v0.5.12 GUI-only line patch to v0.5.11 CI source."""
+from pathlib import Path
+import base64,hashlib,json,lzma
+
+PAYLOAD = "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"
+changes = json.loads(lzma.decompress(base64.b64decode(PAYLOAD)))
+for filename,spec in changes.items():
+    path=Path(filename)
+    original=path.read_text(encoding="utf-8")
+    old_sha=hashlib.sha256(original.encode()).hexdigest()
+    if old_sha!=spec["old_sha"]:
+        raise SystemExit("Unexpected v0.5.11 source checksum for "+filename+": "+old_sha)
+    lines=original.splitlines(keepends=True)
+    for start,end,replacement in reversed(spec["ops"]):
+        lines[start:end]=[replacement]
+    updated="".join(lines)
+    new_sha=hashlib.sha256(updated.encode()).hexdigest()
+    if new_sha!=spec["new_sha"]:
+        raise SystemExit("v0.5.12 output checksum mismatch "+filename+": "+new_sha)
+    path.write_text(updated,encoding="utf-8")
+    print("Applied verified GUI patch to",filename)
+for filename,expected in {
+    "Source/PluginProcessor.cpp":"e72d5fda9c31fbc8cdb4223be3c4ddddaa9699d9905ce4e55fe4b7c6735ab6d4",
+    "Source/PluginProcessor.h":"2e698fc4c3aa124b426add504cca1d8dfd7d4f4340b642b46fdffc56ebf90695",
+    "Source/CetusEQFilters.h":"7ce62811577d1f78606e1828fa322dc0c8b5da1dc1eff33b26e4d4e720a4f329",
+    "Source/CetusLink.h":"0d774b5846f22e537a185cea15a96bde3008c2fc28984d9bd593240fc324eefc",
+}.items():
+    if hashlib.sha256(Path(filename).read_bytes()).hexdigest()!=expected:
+        raise SystemExit("DSP immutable source changed: "+filename)
+print("v0.5.12 layout pass 1 ready; audio DSP untouched")
