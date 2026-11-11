@@ -24,9 +24,18 @@ for filename,spec in changes.items():
         updated=original
         for old_part,new_part in semantic[filename]:
             number=updated.count(old_part)
-            if number!=1:
-                raise SystemExit("Missing/ambiguous GUI patch anchor in "+filename+": "+repr(old_part[:72])+" count="+str(number))
-            updated=updated.replace(old_part,new_part,1)
+            if number==1:
+                updated=updated.replace(old_part,new_part,1)
+            else:
+                # Earlier CI stages may vary in whitespace between methods.
+                import re
+                fragments=re.split(r"(\\s+)",old_part)
+                pattern="".join(r"\\s+" if part.isspace() else re.escape(part) for part in fragments if part)
+                matches=list(re.finditer(pattern,updated))
+                if len(matches)!=1:
+                    raise SystemExit("Missing/ambiguous semantic GUI anchor in "+filename+": "+repr(old_part[:72])+" count="+str(number)+", fuzzy="+str(len(matches)))
+                hit=matches[0]
+                updated=updated[:hit.start()]+new_part+updated[hit.end():]
         assert "VERSION 0.5.12" in updated if filename=="CMakeLists.txt" else True
     path.write_text(updated,encoding="utf-8")
     print("Applied verified GUI patch to",filename)
