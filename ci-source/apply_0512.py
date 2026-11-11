@@ -20,28 +20,19 @@ for filename,spec in changes.items():
         if new_sha!=spec["new_sha"]:
             raise SystemExit("v0.5.12 output checksum mismatch "+filename+": "+new_sha)
     else:
-        print("CI GUI baseline differs from local source:",filename,old_sha)
-        updated=original
-        for old_part,new_part in semantic[filename]:
-            number=updated.count(old_part)
-            if number==1:
-                updated=updated.replace(old_part,new_part,1)
-            else:
-                # Earlier CI stages may vary in whitespace between methods.
-                import re
-                fragments=re.split(r"(\\s+)",old_part)
-                pattern="".join(r"\\s+" if part.isspace() else re.escape(part) for part in fragments if part)
-                matches=list(re.finditer(pattern,updated))
-                if len(matches)!=1:
-                    if "bindFloatingControls(int band)" in old_part and new_part.endswith(old_part):
-                        # CI's older 0.5.11 patch may omit/reformat this now-hidden method.
-                        # New method is standalone: append it at translation-unit scope.
-                        insertion=new_part[:-len(old_part)]
-                        updated += "\n" + insertion
-                        continue
-                    raise SystemExit("Missing/ambiguous semantic GUI anchor in "+filename+": "+repr(old_part[:72])+" count="+str(number)+", fuzzy="+str(len(matches)))
-                hit=matches[0]
-                updated=updated[:hit.start()]+new_part+updated[hit.end():]
+        # v0.5.11 historical CI source sometimes contains extra blank lines
+        # from Windows CRLF conversion. Normalise whitespace-only lines first.
+        print("Normalising inherited GUI source:",filename,old_sha)
+        def norm(src):
+            return "".join(line+"\\n" for line in src.splitlines() if line.strip())
+        updated=norm(original)
+        for index,(old_part,new_part) in enumerate(semantic[filename]):
+            old_segment=norm(old_part)
+            new_segment=norm(new_part)
+            count=updated.count(old_segment)
+            if count!=1:
+                raise SystemExit("Missing/ambiguous GUI anchor "+filename+" #" + str(index) + " " + repr(old_segment[:80]) + " count="+str(count))
+            updated=updated.replace(old_segment,new_segment,1)
         assert "VERSION 0.5.12" in updated if filename=="CMakeLists.txt" else True
     path.write_text(updated,encoding="utf-8")
     print("Applied verified GUI patch to",filename)
