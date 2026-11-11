@@ -24,7 +24,7 @@ for filename,spec in changes.items():
         # from Windows CRLF conversion. Normalise whitespace-only lines first.
         print("Normalising inherited GUI source:",filename,old_sha)
         def norm(src):
-            return "".join(line+"\\n" for line in src.splitlines() if line.strip())
+            return "".join(line+"\n" for line in src.splitlines() if line.strip())
         updated=norm(original)
         for index,(old_part,new_part) in enumerate(semantic[filename]):
             old_segment=norm(old_part)
