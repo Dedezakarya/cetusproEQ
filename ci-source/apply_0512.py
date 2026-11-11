@@ -33,6 +33,12 @@ for filename,spec in changes.items():
                 pattern="".join(r"\\s+" if part.isspace() else re.escape(part) for part in fragments if part)
                 matches=list(re.finditer(pattern,updated))
                 if len(matches)!=1:
+                    if "bindFloatingControls(int band)" in old_part and new_part.endswith(old_part):
+                        # CI's older 0.5.11 patch may omit/reformat this now-hidden method.
+                        # New method is standalone: append it at translation-unit scope.
+                        insertion=new_part[:-len(old_part)]
+                        updated += "\n" + insertion
+                        continue
                     raise SystemExit("Missing/ambiguous semantic GUI anchor in "+filename+": "+repr(old_part[:72])+" count="+str(number)+", fuzzy="+str(len(matches)))
                 hit=matches[0]
                 updated=updated[:hit.start()]+new_part+updated[hit.end():]
