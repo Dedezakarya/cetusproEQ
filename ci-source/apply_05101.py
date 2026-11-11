@@ -11,10 +11,10 @@ def digest(data): return hashlib.sha256(data.encode("utf-8")).hexdigest()
 patches=json.loads(lzma.decompress(base64.b64decode(PATCH)))
 import re
 def replace_function(source, name, new_def):
-    pattern=r"(?:void|juce::Font)\\s+CetusproEQAudioProcessorEditor::(?:CetusLookAndFeel::)?"+re.escape(name)+r"\\s*\\("
+    pattern=r"(?:void|juce::Font)\s+CetusproEQAudioProcessorEditor::(?:CetusLookAndFeel::)?"+re.escape(name)+r"\s*\("
     match=re.search(pattern,source)
     if not match: raise SystemExit("No GUI method found: "+name)
-    begin=source.rfind("\\n",0,match.start())+1
+    begin=source.rfind("\n",0,match.start())+1
     brace=source.find("{",match.end())
     if brace<0: raise SystemExit("No method body: "+name)
     depth=0
@@ -40,7 +40,7 @@ for filename, spec in patches.items():
         if filename=="Source/PluginEditor.h":
             anchor="        juce::Font getComboBoxFont(juce::ComboBox&) override;"
             assert after.count(anchor)==1
-            after=after.replace(anchor,anchor+"\\n        juce::Font getPopupMenuFont() override;",1)
+            after=after.replace(anchor,anchor+"\n        juce::Font getPopupMenuFont() override;",1)
         elif filename=="CMakeLists.txt":
             assert after.count("VERSION 0.5.9")==1
             after=after.replace("VERSION 0.5.9","VERSION 0.5.10.1",1)
@@ -99,7 +99,7 @@ juce::Font CetusproEQAudioProcessorEditor::CetusLookAndFeel::getPopupMenuFont() 
             if old in after:
                 after=after.replace(old,'juce::ColourGradient chartFace(juce::Colour::fromRGB(17, 26, 38),plot.getCentreX(),(float)plot.getY(),',1)
                 after=after.replace('inner.darker(.24f),plot.getCentreX(),(float)plot.getBottom(),false);','juce::Colour::fromRGB(8, 15, 24),plot.getCentreX(),(float)plot.getBottom(),false);',1)
-                after=after.replace('g.setGradientFill(chartFace);g.fillRoundedRectangle(plot.toFloat().expanded(8.0f,9.0f),6.0f);','chartFace.addColour(.55, juce::Colour::fromRGB(12, 20, 30));\\n    g.setGradientFill(chartFace);g.fillRect(plot);',1)
+                after=after.replace('g.setGradientFill(chartFace);g.fillRoundedRectangle(plot.toFloat().expanded(8.0f,9.0f),6.0f);','chartFace.addColour(.55, juce::Colour::fromRGB(12, 20, 30));\n    g.setGradientFill(chartFace);g.fillRect(plot);',1)
             after=after.replace('juce::Colour::fromRGB(82,190,244).withAlpha(.26f)','juce::Colour::fromRGB(82,190,244).withAlpha(.16f)')
             after=after.replace('shade.addColour(.44,ice.withAlpha(.14f))','shade.addColour(.44,ice.withAlpha(.08f))')
             after=after.replace('shade.addColour(.80,juce::Colour::fromRGB(38,119,168).withAlpha(.07f))','shade.addColour(.80,juce::Colour::fromRGB(38,119,168).withAlpha(.03f))')
