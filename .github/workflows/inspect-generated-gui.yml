@@ -43,6 +43,10 @@ jobs:
         run: python tests/verify_v0512.py
       - name: Validate version and immutable DSP
         run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.12.2' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.12.2 source verified')"
+      - name: Apply v0.5.13 filter and analyzer improvements
+        run: python ci-source/apply_0513.py
+      - name: Verify v0.5.13 and unchanged DSP
+        run: python tests/verify_v0513.py
       - name: Inspect filter selection, response and spectrum in generated GUI
         shell: bash
         run: |
