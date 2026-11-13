@@ -19,28 +19,21 @@ finish = "        g.restoreState();"
 assert source.count(begin) == 1
 a = source.index(begin)
 b = source.index(finish, a) + len(finish)
-icons = r"""        // Small curved arrows; correctly oriented arrowheads.
-        const bool redo = id == "cetus-redo";
-        juce::Path body, arrow;
-        if (!redo) {
-            body.startNewSubPath(cx + 5.5f, cy - 5.2f);
-            body.cubicTo(cx + 0.5f, cy - 8.8f, cx - 5.8f, cy - 6.0f, cx - 6.1f, cy - 0.6f);
-            body.cubicTo(cx - 6.2f, cy + 4.5f, cx - 1.2f, cy + 7.4f, cx + 3.2f, cy + 5.7f);
-            arrow.startNewSubPath(cx - 1.8f, cy - 6.0f);
-            arrow.lineTo(cx - 7.0f, cy - 1.0f);
-            arrow.lineTo(cx - 1.5f, cy + 3.6f);
-        } else {
-            body.startNewSubPath(cx - 5.5f, cy - 5.2f);
-            body.cubicTo(cx - 0.5f, cy - 8.8f, cx + 5.8f, cy - 6.0f, cx + 6.1f, cy - 0.6f);
-            body.cubicTo(cx + 6.2f, cy + 4.5f, cx + 1.2f, cy + 7.4f, cx - 3.2f, cy + 5.7f);
-            arrow.startNewSubPath(cx + 1.8f, cy - 6.0f);
-            arrow.lineTo(cx + 7.0f, cy - 1.0f);
-            arrow.lineTo(cx + 1.5f, cy + 3.6f);
-        }
-        const auto stroke = juce::PathStrokeType(1.85f,
-            juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
-        g.strokePath(body, stroke);
-        g.strokePath(arrow, stroke);"""
+icons = r"""        // Exact 48x48 white transparent PNG silhouettes supplied by the user.
+        // Decode once at first paint, not on the audio thread.
+        static const auto decodeIcon = [](const char* encoded) {
+            juce::MemoryOutputStream pngBytes;
+            if (!juce::Base64::convertFromBase64(pngBytes, encoded))
+                return juce::Image();
+            return juce::ImageFileFormat::loadFrom(pngBytes.getData(), pngBytes.getDataSize());
+        };
+        static const juce::Image undoIcon = decodeIcon("iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAA7EAAAOxAGVKw4bAAADyUlEQVRogc2aS4gcVRSGvzsMIUgITQhBJIQoLsYhiyBjI7NIoqALyUpcZOELERcGt3HjRkTcJYsQg0QFIyhBxI1RQnwtYiTgYwyCEh8RGSUESchMQtpx0p+LWxV7uqe7b3V1z9S/6a6qU3XOf++59zyqAgNCHQduA24F7gTuAe7Izm0ExoAF4G9gFjgHnAH+AC4CF0IIzUH15wgDGH4LUAd2ADuBbS0G98MikcwPwOfAKWAmhLBQ1I7CUMfUuvqBel79x3K4rv6svq1OqqWMq6v1LtfG1R3qe5nSUWBefU3drqbMZIeRT6pfqlOtI6FuUJ8xjviocUP9Xn3E6KaFCVzOSNRV1E3qoez8SuJPdZ+6bhACqj+qe9SvVtjwVtxQ31I3pBJ43KUjPb8qZnfigLqpl+1jbb850qdvtHga2GsPdxofkqImMWBdAuaIAaxJHJg1QI0YK9Jc4n+sA/YBV9T9IXSGrZzAoBFxkRhhvyAGpp+Av4gkcgI1YAswCdwH3J8dp26Xa4Hngc+AmWUlXLqIU3FNfUHd1muK2/TUjLvcIeNCLYJj6vpuD25fxL1wXT2ubk8cwW46H1K/Uf9N1HtFfdaYg5WagePqVsuEfm6mJlPqiUS9qifVLa3Pyf2wyBrIM9BSyDLRr4HngF8Sb5sGpjrOWsyFNAa7B8vOQov+aWNil4JPW/V2iwP9MAEcIKbVw8C3wBHgaoLsNLA5PwgA6iSwi7hlFcEMcGoY+Xzm2++znIt04okQwtGyOocO9alENzpmlnYXz71Hiw9Jc6OtxMheOQIX6RZtl2I9cTesFoEs1zmdIFpNAhnOJ8isIcuYq0jgUoLMONmOWUUChTLjKhKoJcgsAg2oJoHbE2QWiDVHJQlMJ8jMARegYgSMXYi7E0TniJVftQgAu4l7fD/8RqzBq0MgS+b2Jop/nHe2K0FAXQvsIRb+/dAAPhmtRQWRFTS/JmaiJ4dVSJWGsS6eML15fE19eLXtBm4af6+xREzFCXVz/6evANTd6nemt1UuG1v9w+omDmR0LRv1wxZvbL3rMg20wu/IChgLMWvcSGwlThBbi7so1lqEWOg8EEI4235hJNORTfOjwGPEwJQ3d1MStXY0gFeADuNhRASIo3sXsZFbBleB/cDry3Wmc0VVxpvA4RBC10J/9VZ0bzSBd4AXQwg9K7QqEpgFDgKv9hr5HFUi0CQu1JeAj0IIjZSbqkJgDjgKvAGcLfINxWoSaBDd5TTwcgjh3CAPWWkCQ//YY1QEmsA88DvR4FniS4wz2f+hfW7zH0Zyx0MELhWiAAAAAElFTkSuQmCC");
+        static const juce::Image redoIcon = decodeIcon("iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAD+UlEQVRogc2aTWhcVRTHfzcEKSEEKSGUIEGllFJEQgkaS6hx05W4cOGiFLF+g4ob0aILVy61C3EhUhC/oMWNgpRS1KBiFasLP6sQLa1oEE00jTE1dn4u7ptkmGQy9715b5ofDMMMd975n3PPnHvufS9QAmovsC17bQduAnYAVwFXZsP+A+aB34CzwCngDDAD/BxC+LeI7dCh8D5gNzAB3AJcR3SiJ+HnNWCW6MQU8CHwcQhhoRNNSaioo+pRdVq9aGcsq+fVd9QJNSUAhYT3qGPqEfXvDkW34qL6ljppTM31grdHHc8rvk+9Q/1KvVSR+EbOqw+rg03ix9VT6p15xA+oT6q/dkF4I3Pqi+q2JvFzyQ6og+qrdifqrfhc3a9+l32eU+8CWJNjTeKHgKeAA8nTVQ27gZeAvobvarBBuVP7gUeAuyuVlk5f0+ceaDEDKsD9wOPAFQWMzRIXrHlgkbiI9QJbgAFgMHt1XC5bpdAo8AT5xNeIK+wU8C7wLXCO6ESNKLYfGAZ2AjcDk8CuDXS0s7cWY8U5mvNPdkl9Qb1BHUixbizLu9RD6oWc9lb+xM0X7VUfVP9KvNCysULcWiCCjXavNy5e/+RwYG0ZVUfUkzkicdIY9Y5y2Vjjrza2ErkcaM69MWBPot2zwEPADyF01BPWGSI2gsXIopAa/Wl1ogzVmd196jc5Zn5lBhqnfpjYFrdjATgCnC5DPDAOHCZWo9w0ptAksU634wzwRghhqYjBdez3EQOShyUaA2hsk19PnL57SxBeGvUU2gpcmzB+EXi7Ojn5qTswzOredSO+ILYIm4ZGB/oTxn9QUsksjboD/aT1PT9VqKUQdQe2kNZQzVaopRDV7P67SN2BJWLP3o6tFWopRN2BBSDlZOyaCrUUou7AL0Qn2rE3W/43DY0O/JkwfpTYNW4a6g7MAj8mjO8HbqtOTn56AEIINeB44m8eUEeqk5SPxjL6HrEatWMnsF9N6Vy7R4ENTerOrXuot5t+6jyt7thUVcm4qT+R6IDZjI1Z1Xl+Xlw9VplLdGBZ/Uzdd7m1r2Cxg61l9XA2G0kHW2WxbnOvjgInyLdo1YhryRTwPnHvfA6Yzcp09zBWpMcsfu/rD/V79VP1uHrAdW4XVe3EgPqM+c8t1+NZtcgpd1taVo8QwjzwPPBKCXYqS6ENy18IYQZ4GjjWoYjKymzbC4cQfgfuIzoyU5WQoiRFJkun54BHga/JPxuXJ4UaCSEsAm8CB4GXiYdcpdvJS64LhxBqIYTTwD3EBzqOEWt/oQc1yqBQbc4Ot75UDxJvge5l9WGPIdYGprIU6mhxydLqI/UT4DWi+O3Ajdn7CPFu5IUOdbbkfz4UylrKrxF0AAAAAElFTkSuQmCC");
+        const auto& icon = id == "cetus-redo" ? redoIcon : undoIcon;
+        if (icon.isValid())
+            g.drawImageWithin(icon, juce::roundToInt(cx - 10.5f), juce::roundToInt(cy - 10.5f),
+                              21, 21, juce::RectanglePlacement::centred);
+        g.restoreState();"""
 source = source[:a] + icons + source[b:]
 
 # 2: Use the embedded reference wordmark. Restore brighter logo and consistent title alignment.
@@ -57,13 +50,13 @@ header = r"""void CetusproEQAudioProcessorEditor::drawHeader(juce::Graphics& g) 
         auto image = CetusBrandAssets::mark().createCopy();
         if (!image.isValid()) return image;
         juce::Image::BitmapData pixels(image, juce::Image::BitmapData::readWrite);
-        const auto cyanLift = juce::Colour::fromRGB(68, 236, 239);
+        const auto cyanLift = juce::Colour::fromRGB(91, 251, 246);
         for (int y = 0; y < image.getHeight(); ++y)
             for (int x = 0; x < image.getWidth(); ++x) {
                 const auto original = pixels.getPixelColour(x, y);
                 if (original.getAlpha() == 0) continue;
-                const auto lifted = original.interpolatedWith(cyanLift, .52f).brighter(.18f);
-                pixels.setPixelColour(x, y, lifted.withAlpha(original.getAlpha()));
+                const auto lifted = original.interpolatedWith(cyanLift, .94f);
+                pixels.setPixelColour(x, y, lifted.withAlpha((juce::uint8) juce::jmin(255, (int) original.getAlpha() * 2)));
             }
         return image;
     }();
@@ -79,7 +72,10 @@ header = r"""void CetusproEQAudioProcessorEditor::drawHeader(juce::Graphics& g) 
                 const auto original = pixels.getPixelColour(x, y);
                 if (original.getAlpha() == 0) continue;
                 pixels.setPixelColour(x, y,
-                    original.brighter(.20f).withAlpha(original.getAlpha()));
+                    original.interpolatedWith(
+                        x > image.getWidth() * .73f ? juce::Colour::fromRGB(73, 246, 239)
+                                                     : juce::Colour::fromRGB(246, 252, 255),
+                        .94f).withAlpha((juce::uint8) juce::jmin(255, (int) original.getAlpha() * 2)));
             }
         return image;
     }();
