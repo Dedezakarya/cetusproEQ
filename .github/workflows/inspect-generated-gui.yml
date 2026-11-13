@@ -53,9 +53,9 @@ jobs:
               source=Path(path).read_text(encoding="utf8")
               print("=== FILE",path,"BYTES",len(source))
               for name in ["updateSpectrum","drawSpectrumAndCurve","comboBoxChanged","selectBand","updateSelectedBandControls","setBand","buttonClicked","getBandType","resetFlat","createLayout"]:
-                  matches=list(re.finditer(r'(?m)^.{0,120}(?:CetusproEQAudioProcessor|CetusproEQAudioProcessorEditor)::'+name+r'\\s*\\(',source))
+                  matches=list(re.finditer(r'(?m)^.{0,120}(?:CetusproEQAudioProcessor|CetusproEQAudioProcessorEditor)::'+name+r'\s*\(',source))
                   for m in matches:
-                      end=source.find("\\nvoid ",m.start()+3)
+                      end=source.find("\nvoid ",m.start()+3)
                       if end<0: end=min(len(source),m.start()+8500)
                       print(">>> METHOD",name,"AT",m.start())
                       print(source[m.start():min(end,m.start()+9800)])
