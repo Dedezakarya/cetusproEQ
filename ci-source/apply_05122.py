@@ -19,25 +19,28 @@ finish = "        g.restoreState();"
 assert source.count(begin) == 1
 a = source.index(begin)
 b = source.index(finish, a) + len(finish)
-icons = r"""        // Original Undo and Redo PNGs resampled with Lanczos to their 21x21
-        // display size. Draw the exact alpha silhouettes as tiny rectangles.
-        // No image decoder, image memory writes, or dynamically built Paths.
-        static constexpr const char undoAlpha[] = "00000300001b6eb5dff2edd09c4f02000300000000251900097ce1ffffffffffffffffc54b00010100005cc03cbffffffdfafcfdfdfbfbffffff80000201004dfffefffcfcfffffffffffffffcfcfdff860002014efefffdfeffffad654b4f7cd0fffffdfbff5c00034cfbfbfafbcc3900000000000b7cfcfefcfee4180152ffffffffd41b0204030303000070fffefcff7300309f9f9f9da9680101000000010300b4fffafec50300000000000000000000000000030148fffcffed230103030302020100000000000002001ceffffffa440000000000000000000000000001000fe0fffeff4e0000000000000000000000000002001aeefffffa4300000000000000000000000000030147fffcffed23000000000000000000000000010300b4fffafec502000000000000000000010303000072fffefcff72000000000000000000000000000c7dfdfefcfee217010000000000000001000f4f7ed1fffffdfbff5b000300000000000000020039fffffffcfcfdff8700020100000000000000020038fbfafaffffff7f0002010000000000000000020038ffffffffc34a000101000000000000000000020036eccf9b4f02000300000000";
-        static constexpr const char redoAlpha[] = "0000000002000452a0d5f1f3e3b9721d000003000000000101004dc7ffffffffffffffffe37e0a001a260001020081fffffefbfbfdfdfcfafdffffc23ec15b01020087fffdfcfcfffffffffffffffcfcffffff4d03005cfffbfdffffd07b4e4964acfefffefdfffe4e0117e4fefcfefd7c0b000000000038ccfbfafbfb4c0072fffcfdff71000003030304021bd3ffffffff5202c4fefaffb5000301000000010168a99d9f9f9f3022ecfffcff4901030000000000000000000000000043faffffee1b0002000000000000010202030303014dfefeffdf0f00010000000000000000000000000043faffffee1b00020000000000000000000000000022ecfffcff4901030000000000000000000000000003c4fefaffb40003010000000000000000000000000072fffcfeff7000000303010000000000000000000117e3fefcfefd7a0a00000000000000000000000003005cfffbfdffffce7c4c0e00010000000000000001020089fffdfcfdffffff3a0002000000000000000001020083fffffef9fbfc3900020000000000000000000101004dc7ffffffff390002000000000000000000000002000353a1d4f037000200000000000000";
-        const char* alpha = id == "cetus-redo" ? redoAlpha : undoAlpha;
-        const int xx = juce::roundToInt(cx - 10.5f);
-        const int yy = juce::roundToInt(cy - 10.5f);
-        const auto nibble = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c - 'a' + 10; };
-        for (int row = 0; row < 21; ++row) {
-            for (int col = 0; col < 21; ++col) {
-                const int offset = (row * 21 + col) * 2;
-                const auto opacity = (juce::uint8) ((nibble(alpha[offset]) << 4) | nibble(alpha[offset + 1]));
-                if (opacity < 16) continue;
-                g.setColour(juce::Colours::white.withAlpha(opacity));
-                g.fillRect(xx + col, yy + row, 1, 1);
-            }
+icons = r"""        // Small curved arrows; correctly oriented arrowheads.
+        const bool redo = id == "cetus-redo";
+        juce::Path body, arrow;
+        if (!redo) {
+            body.startNewSubPath(cx + 5.5f, cy - 5.2f);
+            body.cubicTo(cx + 0.5f, cy - 8.8f, cx - 5.8f, cy - 6.0f, cx - 6.1f, cy - 0.6f);
+            body.cubicTo(cx - 6.2f, cy + 4.5f, cx - 1.2f, cy + 7.4f, cx + 3.2f, cy + 5.7f);
+            arrow.startNewSubPath(cx - 1.8f, cy - 6.0f);
+            arrow.lineTo(cx - 7.0f, cy - 1.0f);
+            arrow.lineTo(cx - 1.5f, cy + 3.6f);
+        } else {
+            body.startNewSubPath(cx - 5.5f, cy - 5.2f);
+            body.cubicTo(cx - 0.5f, cy - 8.8f, cx + 5.8f, cy - 6.0f, cx + 6.1f, cy - 0.6f);
+            body.cubicTo(cx + 6.2f, cy + 4.5f, cx + 1.2f, cy + 7.4f, cx - 3.2f, cy + 5.7f);
+            arrow.startNewSubPath(cx + 1.8f, cy - 6.0f);
+            arrow.lineTo(cx + 7.0f, cy - 1.0f);
+            arrow.lineTo(cx + 1.5f, cy + 3.6f);
         }
-        g.restoreState();"""
+        const auto stroke = juce::PathStrokeType(1.85f,
+            juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
+        g.strokePath(body, stroke);
+        g.strokePath(arrow, stroke);"""
 source = source[:a] + icons + source[b:]
 
 # 2: Use the embedded reference wordmark. Restore brighter logo and consistent title alignment.
