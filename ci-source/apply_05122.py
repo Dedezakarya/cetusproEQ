@@ -19,32 +19,28 @@ finish = "        g.restoreState();"
 assert source.count(begin) == 1
 a = source.index(begin)
 b = source.index(finish, a) + len(finish)
-icons = r"""        // Exact silhouette contours traced from the two supplied 48x48 PNG icons.
-        // Pure vector paint: no image decode or asset initialization when GUI opens.
-        const juce::Point<float> undoPoints[] = {
-            {2.f,4.f}, {2.f,16.f}, {14.f,16.f}, {12.f,14.f}, {14.f,11.f}, {18.f,9.f},
-            {26.f,9.f}, {30.f,11.f}, {36.f,18.f}, {37.f,22.f}, {36.f,29.f}, {30.f,36.f},
-            {22.f,39.f}, {22.f,47.f}, {26.f,47.f}, {32.f,45.f}, {40.f,39.f}, {45.f,29.f},
-            {45.f,18.f}, {42.f,11.f}, {38.f,6.f}, {34.f,3.f}, {26.f,0.f}, {14.f,1.f},
-            {5.f,7.f}
-        };
-        const juce::Point<float> redoPoints[] = {
-            {45.f,4.f}, {42.f,7.f}, {33.f,1.f}, {21.f,0.f}, {10.f,5.f}, {5.f,11.f},
-            {2.f,18.f}, {2.f,29.f}, {7.f,39.f}, {17.f,46.f}, {25.f,47.f}, {25.f,39.f},
-            {17.f,36.f}, {11.f,29.f}, {10.f,25.f}, {11.f,18.f}, {17.f,11.f}, {21.f,9.f},
-            {32.f,10.f}, {35.f,13.f}, {33.f,16.f}, {45.f,16.f}
-        };
-        const bool redoIcon = (id == "cetus-redo");
-        const auto* points = redoIcon ? redoPoints : undoPoints;
-        const int count = redoIcon ? (int) std::size(redoPoints) : (int) std::size(undoPoints);
-        juce::Path iconPath;
-        iconPath.startNewSubPath(points[0]);
-        for (int i = 1; i < count; ++i) iconPath.lineTo(points[i]);
-        iconPath.closeSubPath();
-        g.setColour(juce::Colours::white.withAlpha(.97f));
-        g.fillPath(iconPath, juce::AffineTransform::scale(21.0f / 48.0f)
-                   .translated(cx - 10.5f, cy - 10.5f));
-        g.restoreState();"""
+icons = r"""        // Small curved arrows; correctly oriented arrowheads.
+        const bool redo = id == "cetus-redo";
+        juce::Path body, arrow;
+        if (!redo) {
+            body.startNewSubPath(cx + 5.5f, cy - 5.2f);
+            body.cubicTo(cx + 0.5f, cy - 8.8f, cx - 5.8f, cy - 6.0f, cx - 6.1f, cy - 0.6f);
+            body.cubicTo(cx - 6.2f, cy + 4.5f, cx - 1.2f, cy + 7.4f, cx + 3.2f, cy + 5.7f);
+            arrow.startNewSubPath(cx - 1.8f, cy - 6.0f);
+            arrow.lineTo(cx - 7.0f, cy - 1.0f);
+            arrow.lineTo(cx - 1.5f, cy + 3.6f);
+        } else {
+            body.startNewSubPath(cx - 5.5f, cy - 5.2f);
+            body.cubicTo(cx - 0.5f, cy - 8.8f, cx + 5.8f, cy - 6.0f, cx + 6.1f, cy - 0.6f);
+            body.cubicTo(cx + 6.2f, cy + 4.5f, cx + 1.2f, cy + 7.4f, cx - 3.2f, cy + 5.7f);
+            arrow.startNewSubPath(cx + 1.8f, cy - 6.0f);
+            arrow.lineTo(cx + 7.0f, cy - 1.0f);
+            arrow.lineTo(cx + 1.5f, cy + 3.6f);
+        }
+        const auto stroke = juce::PathStrokeType(1.85f,
+            juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
+        g.strokePath(body, stroke);
+        g.strokePath(arrow, stroke);"""
 source = source[:a] + icons + source[b:]
 
 # 2: Use the embedded reference wordmark. Restore brighter logo and consistent title alignment.
