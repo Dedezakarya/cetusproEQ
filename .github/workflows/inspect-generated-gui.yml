@@ -1,7 +1,7 @@
 name: Inspect cetusproEQ generated GUI
 on:
   push:
-    branches: [ 'feature/cetusproeq-v0.5.12.2-ui-fixes' ]
+    branches: [ 'feature/cetusproeq-v0.5.13-hplp-spectrum-curve' ]
 permissions:
   contents: read
 jobs:
@@ -43,19 +43,24 @@ jobs:
         run: python tests/verify_v0512.py
       - name: Validate version and immutable DSP
         run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.12.2' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.12.2 source verified')"
-      - name: Dump only Undo Redo GUI source context
+      - name: Inspect filter selection, response and spectrum in generated GUI
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          for filename in ['Source/PluginEditor.cpp','Source/PluginEditor.h']:
-              s=Path(filename).read_text(encoding='utf8')
-              print('SOURCE',filename,len(s))
-              for term in ['cetus-undo','cetus-redo','drawButtonText(','void CetusproEQAudioProcessorEditor::resized(', 'undoButton','redoButton','undo.setBounds','redo.setBounds','undo.add','redo.add','class CetusproEQAudioProcessorEditor']:
-                  print('LOOKUP',term,'hits',s.count(term))
-                  start=0
-                  for iteration in range(min(3,s.count(term))):
-                      j=s.find(term,start)
-                      print('>>>',j,s[max(0,j-360):j+850])
-                      start=j+len(term)
+          import re
+          for path in ["Source/PluginEditor.cpp","Source/PluginEditor.h","Source/PluginProcessor.cpp"]:
+              source=Path(path).read_text(encoding="utf8")
+              print("=== FILE",path,"BYTES",len(source))
+              for name in ["updateSpectrum","drawSpectrumAndCurve","comboBoxChanged","selectBand","updateSelectedBandControls","setBand","buttonClicked","getBandType","resetFlat","createLayout"]:
+                  matches=list(re.finditer(r'(?m)^.{0,120}(?:CetusproEQAudioProcessor|CetusproEQAudioProcessorEditor)::'+name+r'\\s*\\(',source))
+                  for m in matches:
+                      end=source.find("\\nvoid ",m.start()+3)
+                      if end<0: end=min(len(source),m.start()+8500)
+                      print(">>> METHOD",name,"AT",m.start())
+                      print(source[m.start():min(end,m.start()+9800)])
+              if "PluginEditor" in path:
+                  for term in ["bandType.addListener","bandType.onChange","bandTypeAttachment","updateSpectrum","dbSpectrum","getMagnitudeForFrequency"]:
+                      ix=source.find(term)
+                      if ix>=0:print(">>> TOKEN",term,source[max(0,ix-500):ix+1200])
           PY
