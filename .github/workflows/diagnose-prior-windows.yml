@@ -1,0 +1,37 @@
+name: Diagnose previous v0.5.12.2 Windows GUI
+on:
+  push:
+    branches: [ 'feature/cetusproeq-v0.5.12.2-ui-fixes' ]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare-previous:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Download unmodified v0.5.12.2 from successful Run 48
+        uses: actions/download-artifact@v4
+        with:
+          name: cetusproEQ-v0.5.12.2-Windows-x64-VST3
+          path: prior-zip
+          run-id: 43354721154
+          github-token: ${{ github.token }}
+      - name: Unpack prior VST3 and validate editor
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zips = @(Get-ChildItem prior-zip -File -Filter *.zip)
+          if ($zips.Count -ne 1) { throw 'Expected exactly one inner plugin ZIP' }
+          Expand-Archive -LiteralPath $zips[0].FullName -DestinationPath prior-plugin -Force
+          $bundle = @(Get-ChildItem prior-plugin -Directory -Recurse -Filter cetusproEQ.vst3)
+          if ($bundle.Count -ne 1) { throw 'Baseline VST3 bundle missing' }
+          Invoke-WebRequest -Uri "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip" -OutFile pluginval.zip
+          Expand-Archive -LiteralPath pluginval.zip -DestinationPath pluginval-tool -Force
+          $test = @(Get-ChildItem pluginval-tool -Recurse -File -Filter pluginval.exe | Select-Object -First 1)
+          if ($test.Count -ne 1) { throw 'pluginval missing' }
+          $argv = @('--validate-in-process', '--strictness-level', '5', '--validate', ('"' + $bundle[0].FullName + '"'))
+          $p = Start-Process -FilePath $test[0].FullName -ArgumentList $argv -NoNewWindow -PassThru -Wait
+          Write-Host "Prior Run #48 pluginval exit code: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "Baseline editor failed with code $($p.ExitCode)" }
