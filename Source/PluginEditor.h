@@ -27,6 +27,8 @@ private:
     juce::ToggleButton bandOn {"Band enabled"}, dynamicOn {"Dynamic"}, bypass {"Bypass"};
     juce::ComboBox send, listen;
     juce::Slider out;
+    juce::DrawableButton undoButton {"Undo", juce::DrawableButton::ImageFitted};
+    juce::DrawableButton redoButton {"Redo", juce::DrawableButton::ImageFitted};
     juce::Label sendLabel, listenLabel, outLabel;
     std::unique_ptr<ButtonAttachment> onAttachment, dynamicAttachment, bypassAttachment;
     std::unique_ptr<ComboAttachment> sendAttachment, listenAttachment;
