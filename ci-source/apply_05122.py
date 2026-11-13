@@ -19,20 +19,31 @@ finish = "        g.restoreState();"
 assert source.count(begin) == 1
 a = source.index(begin)
 b = source.index(finish, a) + len(finish)
-icons = r"""        // Exact 48x48 white transparent PNG silhouettes supplied by the user.
-        // Decode once at first paint, not on the audio thread.
-        static const auto decodeIcon = [](const char* encoded) {
-            juce::MemoryOutputStream pngBytes;
-            if (!juce::Base64::convertFromBase64(pngBytes, encoded))
-                return juce::Image();
-            return juce::ImageFileFormat::loadFrom(pngBytes.getData(), pngBytes.getDataSize());
+icons = r"""        // Exact silhouette contours traced from the two supplied 48x48 PNG icons.
+        // Pure vector paint: no image decode or asset initialization when GUI opens.
+        const juce::Point<float> undoPoints[] = {
+            {2.f,4.f}, {2.f,16.f}, {14.f,16.f}, {12.f,14.f}, {14.f,11.f}, {18.f,9.f},
+            {26.f,9.f}, {30.f,11.f}, {36.f,18.f}, {37.f,22.f}, {36.f,29.f}, {30.f,36.f},
+            {22.f,39.f}, {22.f,47.f}, {26.f,47.f}, {32.f,45.f}, {40.f,39.f}, {45.f,29.f},
+            {45.f,18.f}, {42.f,11.f}, {38.f,6.f}, {34.f,3.f}, {26.f,0.f}, {14.f,1.f},
+            {5.f,7.f}
         };
-        static const juce::Image undoIcon = decodeIcon("iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAA7EAAAOxAGVKw4bAAADyUlEQVRogc2aS4gcVRSGvzsMIUgITQhBJIQoLsYhiyBjI7NIoqALyUpcZOELERcGt3HjRkTcJYsQg0QFIyhBxI1RQnwtYiTgYwyCEh8RGSUESchMQtpx0p+LWxV7uqe7b3V1z9S/6a6qU3XOf++59zyqAgNCHQduA24F7gTuAe7Izm0ExoAF4G9gFjgHnAH+AC4CF0IIzUH15wgDGH4LUAd2ADuBbS0G98MikcwPwOfAKWAmhLBQ1I7CUMfUuvqBel79x3K4rv6svq1OqqWMq6v1LtfG1R3qe5nSUWBefU3drqbMZIeRT6pfqlOtI6FuUJ8xjviocUP9Xn3E6KaFCVzOSNRV1E3qoez8SuJPdZ+6bhACqj+qe9SvVtjwVtxQ31I3pBJ43KUjPb8qZnfigLqpl+1jbb850qdvtHga2GsPdxofkqImMWBdAuaIAaxJHJg1QI0YK9Jc4n+sA/YBV9T9IXSGrZzAoBFxkRhhvyAGpp+Av4gkcgI1YAswCdwH3J8dp26Xa4Hngc+AmWUlXLqIU3FNfUHd1muK2/TUjLvcIeNCLYJj6vpuD25fxL1wXT2ubk8cwW46H1K/Uf9N1HtFfdaYg5WagePqVsuEfm6mJlPqiUS9qifVLa3Pyf2wyBrIM9BSyDLRr4HngF8Sb5sGpjrOWsyFNAa7B8vOQov+aWNil4JPW/V2iwP9MAEcIKbVw8C3wBHgaoLsNLA5PwgA6iSwi7hlFcEMcGoY+Xzm2++znIt04okQwtGyOocO9alENzpmlnYXz71Hiw9Jc6OtxMheOQIX6RZtl2I9cTesFoEs1zmdIFpNAhnOJ8isIcuYq0jgUoLMONmOWUUChTLjKhKoJcgsAg2oJoHbE2QWiDVHJQlMJ8jMARegYgSMXYi7E0TniJVftQgAu4l7fD/8RqzBq0MgS+b2Jop/nHe2K0FAXQvsIRb+/dAAPhmtRQWRFTS/JmaiJ4dVSJWGsS6eML15fE19eLXtBm4af6+xREzFCXVz/6evANTd6nemt1UuG1v9w+omDmR0LRv1wxZvbL3rMg20wu/IChgLMWvcSGwlThBbi7so1lqEWOg8EEI4235hJNORTfOjwGPEwJQ3d1MStXY0gFeADuNhRASIo3sXsZFbBleB/cDry3Wmc0VVxpvA4RBC10J/9VZ0bzSBd4AXQwg9K7QqEpgFDgKv9hr5HFUi0CQu1JeAj0IIjZSbqkJgDjgKvAGcLfINxWoSaBDd5TTwcgjh3CAPWWkCQ//YY1QEmsA88DvR4FniS4wz2f+hfW7zH0Zyx0MELhWiAAAAAElFTkSuQmCC");
-        static const juce::Image redoIcon = decodeIcon("iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAD+UlEQVRogc2aTWhcVRTHfzcEKSEEKSGUIEGllFJEQgkaS6hx05W4cOGiFLF+g4ob0aILVy61C3EhUhC/oMWNgpRS1KBiFasLP6sQLa1oEE00jTE1dn4u7ptkmGQy9715b5ofDMMMd975n3PPnHvufS9QAmovsC17bQduAnYAVwFXZsP+A+aB34CzwCngDDAD/BxC+LeI7dCh8D5gNzAB3AJcR3SiJ+HnNWCW6MQU8CHwcQhhoRNNSaioo+pRdVq9aGcsq+fVd9QJNSUAhYT3qGPqEfXvDkW34qL6ljppTM31grdHHc8rvk+9Q/1KvVSR+EbOqw+rg03ix9VT6p15xA+oT6q/dkF4I3Pqi+q2JvFzyQ6og+qrdifqrfhc3a9+l32eU+8CWJNjTeKHgKeAA8nTVQ27gZeAvobvarBBuVP7gUeAuyuVlk5f0+ceaDEDKsD9wOPAFQWMzRIXrHlgkbiI9QJbgAFgMHt1XC5bpdAo8AT5xNeIK+wU8C7wLXCO6ESNKLYfGAZ2AjcDk8CuDXS0s7cWY8U5mvNPdkl9Qb1BHUixbizLu9RD6oWc9lb+xM0X7VUfVP9KvNCysULcWiCCjXavNy5e/+RwYG0ZVUfUkzkicdIY9Y5y2Vjjrza2ErkcaM69MWBPot2zwEPADyF01BPWGSI2gsXIopAa/Wl1ogzVmd196jc5Zn5lBhqnfpjYFrdjATgCnC5DPDAOHCZWo9w0ptAksU634wzwRghhqYjBdez3EQOShyUaA2hsk19PnL57SxBeGvUU2gpcmzB+EXi7Ojn5qTswzOredSO+ILYIm4ZGB/oTxn9QUsksjboD/aT1PT9VqKUQdQe2kNZQzVaopRDV7P67SN2BJWLP3o6tFWopRN2BBSDlZOyaCrUUou7AL0Qn2rE3W/43DY0O/JkwfpTYNW4a6g7MAj8mjO8HbqtOTn56AEIINeB44m8eUEeqk5SPxjL6HrEatWMnsF9N6Vy7R4ENTerOrXuot5t+6jyt7thUVcm4qT+R6IDZjI1Z1Xl+Xlw9VplLdGBZ/Uzdd7m1r2Cxg61l9XA2G0kHW2WxbnOvjgInyLdo1YhryRTwPnHvfA6Yzcp09zBWpMcsfu/rD/V79VP1uHrAdW4XVe3EgPqM+c8t1+NZtcgpd1taVo8QwjzwPPBKCXYqS6ENy18IYQZ4GjjWoYjKymzbC4cQfgfuIzoyU5WQoiRFJkun54BHga/JPxuXJ4UaCSEsAm8CB4GXiYdcpdvJS64LhxBqIYTTwD3EBzqOEWt/oQc1yqBQbc4Ot75UDxJvge5l9WGPIdYGprIU6mhxydLqI/UT4DWi+O3Ajdn7CPFu5IUOdbbkfz4UylrKrxF0AAAAAElFTkSuQmCC");
-        const auto& icon = id == "cetus-redo" ? redoIcon : undoIcon;
-        if (icon.isValid())
-            g.drawImageWithin(icon, juce::roundToInt(cx - 10.5f), juce::roundToInt(cy - 10.5f),
-                              21, 21, juce::RectanglePlacement::centred);
+        const juce::Point<float> redoPoints[] = {
+            {45.f,4.f}, {42.f,7.f}, {33.f,1.f}, {21.f,0.f}, {10.f,5.f}, {5.f,11.f},
+            {2.f,18.f}, {2.f,29.f}, {7.f,39.f}, {17.f,46.f}, {25.f,47.f}, {25.f,39.f},
+            {17.f,36.f}, {11.f,29.f}, {10.f,25.f}, {11.f,18.f}, {17.f,11.f}, {21.f,9.f},
+            {32.f,10.f}, {35.f,13.f}, {33.f,16.f}, {45.f,16.f}
+        };
+        const bool redoIcon = (id == "cetus-redo");
+        const auto* points = redoIcon ? redoPoints : undoPoints;
+        const int count = redoIcon ? (int) std::size(redoPoints) : (int) std::size(undoPoints);
+        juce::Path iconPath;
+        iconPath.startNewSubPath(points[0]);
+        for (int i = 1; i < count; ++i) iconPath.lineTo(points[i]);
+        iconPath.closeSubPath();
+        g.setColour(juce::Colours::white.withAlpha(.97f));
+        g.fillPath(iconPath, juce::AffineTransform::scale(21.0f / 48.0f)
+                   .translated(cx - 10.5f, cy - 10.5f));
         g.restoreState();"""
 source = source[:a] + icons + source[b:]
 
@@ -50,7 +61,7 @@ header = r"""void CetusproEQAudioProcessorEditor::drawHeader(juce::Graphics& g) 
         auto image = CetusBrandAssets::mark().createCopy();
         if (!image.isValid()) return image;
         juce::Image::BitmapData pixels(image, juce::Image::BitmapData::readWrite);
-        const auto cyanLift = juce::Colour::fromRGB(91, 251, 246);
+        const auto cyanLift = juce::Colour::fromRGB(88, 245, 239);
         for (int y = 0; y < image.getHeight(); ++y)
             for (int x = 0; x < image.getWidth(); ++x) {
                 const auto original = pixels.getPixelColour(x, y);
@@ -73,9 +84,10 @@ header = r"""void CetusproEQAudioProcessorEditor::drawHeader(juce::Graphics& g) 
                 if (original.getAlpha() == 0) continue;
                 pixels.setPixelColour(x, y,
                     original.interpolatedWith(
-                        x > image.getWidth() * .73f ? juce::Colour::fromRGB(73, 246, 239)
-                                                     : juce::Colour::fromRGB(246, 252, 255),
-                        .94f).withAlpha((juce::uint8) juce::jmin(255, (int) original.getAlpha() * 2)));
+                        (original.getSaturation() > .18f && original.getGreen() > original.getRed())
+                            ? juce::Colour::fromRGB(70, 242, 236)
+                            : juce::Colour::fromRGB(244, 250, 252), .94f)
+                    .withAlpha((juce::uint8) juce::jmin(255, (int) original.getAlpha() * 2)));
             }
         return image;
     }();
