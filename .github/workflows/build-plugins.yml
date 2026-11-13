@@ -67,9 +67,47 @@ jobs:
       - name: Configure (Visual Studio 2022)
         shell: pwsh
         run: cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64
-      - name: Compile VST3
+      - name: Compile VST3 and Standalone (same v0.5.12.2 DSP)
         shell: pwsh
-        run: cmake --build build-win --config Release --target cetusproEQ_VST3 --parallel 4
+        run: cmake --build build-win --config Release --target cetusproEQ_VST3 cetusproEQ_Standalone --parallel 4
+      - name: Verify Standalone starts and stays alive (Windows smoke test)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exes = @(Get-ChildItem build-win/cetusproEQ_artefacts -Recurse -File -Filter cetusproEQ.exe)
+          if ($exes.Count -ne 1) { throw "Expected one standalone executable; got $($exes.Count)" }
+          $exe = $exes[0].FullName
+          Write-Host "Launching $exe"
+          $app = Start-Process -FilePath $exe -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            $app.Refresh()
+            if ($app.HasExited) { throw "Standalone application exited unexpectedly with code $($app.ExitCode)" }
+            Write-Host "Standalone process stayed alive for 8s"
+          } finally {
+            if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
+          }
+      - name: Validate VST3 host loading and GUI with pluginval
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bundle = @(Get-ChildItem build-win/cetusproEQ_artefacts -Recurse -Directory -Filter cetusproEQ.vst3)
+          if ($bundle.Count -ne 1) { throw "VST3 bundle missing/ambiguous" }
+          Invoke-WebRequest -Uri "https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip" -OutFile pluginval_Windows.zip
+          Expand-Archive -LiteralPath pluginval_Windows.zip -DestinationPath pluginval-test -Force
+          $validator = @(Get-ChildItem pluginval-test -Recurse -File -Filter pluginval.exe | Select-Object -First 1)
+          if ($validator.Count -ne 1) { throw "pluginval executable missing" }
+          New-Item -ItemType Directory -Force -Path validation-logs | Out-Null
+          & $validator[0].FullName --validate-in-process --strictness-level 1 --output-dir validation-logs --validate $bundle[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw "VST3 plugin host validation failed: $LASTEXITCODE" }
+      - name: Upload pluginval diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cetusproEQ-v0.5.12.2-Windows-validation-logs
+          path: validation-logs/
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Package Windows VST3
         shell: pwsh
         run: |
@@ -82,6 +120,20 @@ jobs:
           }
           Compress-Archive -LiteralPath $bundle -DestinationPath dist/cetusproEQ-v0.5.12.2-Windows-x64-VST3.zip -CompressionLevel Optimal -Force
           Get-Item dist/*.zip | Select-Object Name,Length
+      - name: Package Windows Standalone executable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exes = @(Get-ChildItem build-win/cetusproEQ_artefacts -Recurse -File -Filter cetusproEQ.exe)
+          if ($exes.Count -ne 1) { throw "Standalone executable missing" }
+          Compress-Archive -LiteralPath $exes[0].FullName -DestinationPath dist/cetusproEQ-v0.5.12.2-Windows-x64-Standalone.zip -CompressionLevel Optimal -Force
+      - name: Upload Windows Standalone artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cetusproEQ-v0.5.12.2-Windows-x64-Standalone
+          path: dist/cetusproEQ-v0.5.12.2-Windows-x64-Standalone.zip
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4
         with:
