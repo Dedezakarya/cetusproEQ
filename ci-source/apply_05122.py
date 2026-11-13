@@ -57,42 +57,20 @@ header = r"""void CetusproEQAudioProcessorEditor::drawHeader(juce::Graphics& g) 
     const auto h = headerRect().toFloat();
     drawGlass(g, h, 10.0f, top, 0.84f);
 
-    static const juce::Image brightLogo = [] {
-        auto image = CetusBrandAssets::mark().createCopy();
-        if (!image.isValid()) return image;
-        juce::Image::BitmapData pixels(image, juce::Image::BitmapData::readWrite);
-        const auto cyanLift = juce::Colour::fromRGB(88, 245, 239);
-        for (int y = 0; y < image.getHeight(); ++y)
-            for (int x = 0; x < image.getWidth(); ++x) {
-                const auto original = pixels.getPixelColour(x, y);
-                if (original.getAlpha() == 0) continue;
-                const auto lifted = original.interpolatedWith(cyanLift, .94f);
-                pixels.setPixelColour(x, y, lifted.withAlpha((juce::uint8) juce::jmin(255, (int) original.getAlpha() * 2)));
-            }
-        return image;
-    }();
-    if (brightLogo.isValid())
-        g.drawImageWithin(brightLogo, 18, 12, 46, 46, juce::RectanglePlacement::centred);
-
-    static const juce::Image brightWordmark = [] {
-        auto image = CetusBrandAssets::wordmark().createCopy();
-        if (!image.isValid()) return image;
-        juce::Image::BitmapData pixels(image, juce::Image::BitmapData::readWrite);
-        for (int y = 0; y < image.getHeight(); ++y)
-            for (int x = 0; x < image.getWidth(); ++x) {
-                const auto original = pixels.getPixelColour(x, y);
-                if (original.getAlpha() == 0) continue;
-                pixels.setPixelColour(x, y,
-                    original.interpolatedWith(
-                        (original.getSaturation() > .18f && original.getGreen() > original.getRed())
-                            ? juce::Colour::fromRGB(70, 242, 236)
-                            : juce::Colour::fromRGB(244, 250, 252), .94f)
-                    .withAlpha((juce::uint8) juce::jmin(255, (int) original.getAlpha() * 2)));
-            }
-        return image;
-    }();
-    if (brightWordmark.isValid())
-        g.drawImageWithin(brightWordmark, 69, 16, 150, 40, juce::RectanglePlacement::centred);
+    // Do not mutate PNG pixel data while opening the plugin editor. On Windows,
+    // the previous per-pixel GUI-only brightness lift caused an editor crash.
+    // Multiple composited passes lift the existing low-alpha reference artwork
+    // without changing its silhouette, using only JUCE's normal image renderer.
+    const auto& logo = CetusBrandAssets::mark();
+    if (logo.isValid()) {
+        for (int n = 0; n < 6; ++n)
+            g.drawImageWithin(logo, 18, 12, 46, 46, juce::RectanglePlacement::centred);
+    }
+    const auto& brand = CetusBrandAssets::wordmark();
+    if (brand.isValid()) {
+        for (int n = 0; n < 7; ++n)
+            g.drawImageWithin(brand, 69, 16, 150, 40, juce::RectanglePlacement::centred);
+    }
 
     g.setColour(juce::Colour::fromRGB(119, 151, 171).withAlpha(.58f));
     g.fillRect(225, 21, 1, 29);
