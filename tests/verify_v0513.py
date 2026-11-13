@@ -9,7 +9,7 @@ cm=Path("CMakeLists.txt").read_text(encoding="utf-8")
 assert "VERSION 0.5.13" in cm
 assert "v0.5.13" in source
 assert "0.70710678f" in source
-assert "newType == CetusEQ::HighPass || newType == CetusEQ::LowPass" in source
+assert "newType == 3 || newType == 4" in source
 assert "spectrumAt(juce::jmap(fraction,lowBin,highBin))" in source
 assert "const float p = juce::jlimit(1.0f,maxBin-0.001f,position)" in source
 assert "spectrumDb[i] += (db-spectrumDb[i])*0.52f" in source
