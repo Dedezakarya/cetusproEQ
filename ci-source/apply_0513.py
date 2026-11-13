@@ -17,6 +17,8 @@ def swap_once(old, new, reason):
     source = source.replace(old, new, 1)
 
 # 1. Selecting a HP / LP filter starts at maximally-flat Butterworth Q.
+# The host parameter choice list uses indexes 3=High Pass and 4=Low Pass;
+# do not reference enum names that are not exported by CetusEQFilters.h.
 # Explicitly changing filter type is the user action; preset loads/undo retain custom Q.
 swap_once(
     '''    if(c==&hudType && attachedHudBand>=0) {
@@ -33,14 +35,14 @@ swap_once(
         processor.setParameterActual(CetusproEQAudioProcessor::param(attachedHudBand,"type"),
             (float)newType);
         if (!restoringHistory && newType != previousType &&
-            (newType == CetusEQ::HighPass || newType == CetusEQ::LowPass))
+            (newType == 3 || newType == 4))
             processor.setParameterActual(CetusproEQAudioProcessor::param(attachedHudBand,"q"),
                 0.70710678f);
         if(attachedHudBand==selectedBand){setKnobType();if(hudPinned)bindFloatingControls(selectedBand);}
         requestHistorySnapshot();
     } else if(c==&bandType) {
         const int newType = juce::jmax(0,bandType.getSelectedId()-1);
-        if (!restoringHistory && (newType == CetusEQ::HighPass || newType == CetusEQ::LowPass))
+        if (!restoringHistory && (newType == 3 || newType == 4))
             processor.setParameterActual(CetusproEQAudioProcessor::param(selectedBand,"q"),
                 0.70710678f);
         setKnobType();if(hudPinned)bindFloatingControls(selectedBand);requestHistorySnapshot();syncHud();
@@ -89,9 +91,9 @@ swap_once(
             for(int bin=lo;bin<=hi;++bin)dB+=spectrumDb[(size_t)bin];
             dB/=(float)(hi-lo+1);''',
     '''            const float lowBin = juce::jlimit(1.0f,maxBin-0.001f,
-                frequency*std::pow(2.0f,-octaves)*CetusproEQAudioProcessor::fftSize/sr);
+                (float)(frequency*std::pow(2.0f,-octaves)*CetusproEQAudioProcessor::fftSize/sr));
             const float highBin = juce::jlimit(lowBin,maxBin-0.001f,
-                frequency*std::pow(2.0f,octaves)*CetusproEQAudioProcessor::fftSize/sr);
+                (float)(frequency*std::pow(2.0f,octaves)*CetusproEQAudioProcessor::fftSize/sr));
             // Seven frequency-domain taps, including fractional bin positions.
             // Retain the user's existing 1/6-oct, 1/3-oct and smooth-off modes.
             float dB=0.0f;
