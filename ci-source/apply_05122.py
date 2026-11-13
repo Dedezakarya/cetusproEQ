@@ -94,6 +94,49 @@ swap_once("placeDesignChild(k.slider,{x+12,429,78,104});",
 swap_once("placeDesignChild(k.label,{x+2,497,98,14});",
           "placeDesignChild(k.label,{x+2,492,98,14});")
 
+# Preserve the proven-safe text-button drawing path. Display the exact supplied
+# PNG icons as non-interactive overlays so clicks continue reaching the original
+# Undo/Redo buttons. Never decode or rasterize inside LookAndFeel paint callbacks.
+swap_once(
+    '    const juce::String id=button.getComponentID();\n'
+    '    if(id.isEmpty() || !id.startsWith("cetus-")) {',
+    '    const juce::String id=button.getComponentID();\n'
+    '    if(id=="cetus-undo" || id=="cetus-redo") return;\n'
+    '    if(id.isEmpty() || !id.startsWith("cetus-")) {'
+)
+swap_once(
+    '    undoButton.setTooltip("Undo last parameter edit");\n'
+    '    redoButton.setTooltip("Redo parameter edit");',
+    '''    undoButton.setTooltip("Undo last parameter edit");
+    redoButton.setTooltip("Redo parameter edit");
+    undoIconImage.setImage(juce::ImageFileFormat::loadFrom(
+        BinaryData::CetusUndo_png, (size_t) BinaryData::CetusUndo_pngSize));
+    redoIconImage.setImage(juce::ImageFileFormat::loadFrom(
+        BinaryData::CetusRedo_png, (size_t) BinaryData::CetusRedo_pngSize));
+    undoIconImage.setInterceptsMouseClicks(false, false);
+    redoIconImage.setInterceptsMouseClicks(false, false);
+    addAndMakeVisible(undoIconImage);
+    addAndMakeVisible(redoIconImage);'''
+)
+swap_once(
+    '    placeDesignChild(redoButton,        {673, 22, 30,  28});',
+    '''    placeDesignChild(redoButton,        {673, 22, 30,  28});
+    // Pixel-exact source PNGs, uniformly scaled to fit within the controls.
+    placeDesignChild(undoIconImage, {642, 26, 20, 20});
+    placeDesignChild(redoIconImage, {678, 26, 20, 20});
+    undoIconImage.toFront(false);
+    redoIconImage.toFront(false);'''
+)
+assert '#include <BinaryData.h>' not in source
+source = '#include <BinaryData.h>\n' + source
+headerPath = Path("Source/PluginEditor.h")
+guiHeader = headerPath.read_text(encoding="utf-8")
+decl = '    juce::TextButton undoButton {"Undo"}, redoButton {"Redo"};'
+assert guiHeader.count(decl) == 1
+guiHeader = guiHeader.replace(decl, decl +
+    '\n    juce::ImageComponent undoIconImage {"Undo PNG"}, redoIconImage {"Redo PNG"};', 1)
+headerPath.write_text(guiHeader, encoding="utf-8")
+
 # Bump UI footer and metadata only.
 source = source.replace('cetusproEQ  /  v0.5.12"', 'cetusproEQ  /  v0.5.12.2"')
 source = source.replace('cetusproEQ  /  v0.5.12.1"', 'cetusproEQ  /  v0.5.12.2"')
@@ -103,7 +146,20 @@ p.write_text(source, encoding="utf-8")
 cm = Path("CMakeLists.txt")
 c = cm.read_text(encoding="utf-8")
 assert c.count("VERSION 0.5.12.1") == 1
-cm.write_text(c.replace("VERSION 0.5.12.1", "VERSION 0.5.12.2", 1), encoding="utf-8")
+cm.write_text(c.replace("VERSION 0.5.12.1", "VERSION 0.5.12.2", 1) + """
+# Embed the original 48x48 RGBA PNGs as JUCE image assets, without
+# modifying DSP or loading external files at runtime.
+juce_add_binary_data(cetusproEQIconAssets SOURCES
+    assets/CetusUndo.png
+    assets/CetusRedo.png)
+target_link_libraries(cetusproEQ PRIVATE cetusproEQIconAssets)
+""", encoding="utf-8")
+for asset, checksum in {
+    "assets/CetusUndo.png": "51792fc1be38c4d42a9b372f23f82845bfb76e53692825c5ccff3dbf4a8e0dfa",
+    "assets/CetusRedo.png": "1243bd7f8d069e3c3b359413c828f01ec0e1d2dd717d5277add6682b8c261b30"
+}.items():
+    if hashlib.sha256(Path(asset).read_bytes()).hexdigest() != checksum:
+        raise RuntimeError("Uploaded GUI PNG is not byte-identical to supplied image: " + asset)
 
 dsp = {
 "Source/PluginProcessor.cpp":"e72d5fda9c31fbc8cdb4223be3c4ddddaa9699d9905ce4e55fe4b7c6735ab6d4",
