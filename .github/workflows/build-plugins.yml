@@ -99,8 +99,14 @@ jobs:
           $validator = @(Get-ChildItem pluginval-test -Recurse -File -Filter pluginval.exe | Select-Object -First 1)
           if ($validator.Count -ne 1) { throw "pluginval executable missing" }
           New-Item -ItemType Directory -Force -Path validation-logs | Out-Null
-          & $validator[0].FullName --validate-in-process --strictness-level 1 --output-dir validation-logs --validate $bundle[0].FullName
-          if ($LASTEXITCODE -ne 0) { throw "VST3 plugin host validation failed: $LASTEXITCODE" }
+          # GUI-subsystem executables may not populate LASTEXITCODE when called with &.
+          # Start-Process -Wait reliably returns the exit status after all host/editor tests.
+          $argsList = @('--validate-in-process', '--strictness-level', '5',
+                         '--output-dir', 'validation-logs', '--validate',
+                         ('"' + $bundle[0].FullName + '"'))
+          $valProcess = Start-Process -FilePath $validator[0].FullName -ArgumentList $argsList -NoNewWindow -Wait -PassThru
+          Write-Host "pluginval exit code: $($valProcess.ExitCode)"
+          if ($valProcess.ExitCode -ne 0) { throw "VST3 plugin host/editor validation failed: $($valProcess.ExitCode)" }
       - name: Upload pluginval diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4
