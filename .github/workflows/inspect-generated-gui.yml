@@ -1,7 +1,7 @@
 name: Inspect cetusproEQ generated GUI
 on:
   push:
-    branches: [ 'feature/cetusproeq-v0.5.14-analyzer-calibration' ]
+    branches: [ 'feature/cetusproeq-v0.5.16-zero-latency-label' ]
 permissions:
   contents: read
 jobs:
@@ -51,28 +51,26 @@ jobs:
         run: python ci-source/apply_0514.py
       - name: Verify independent dBFS scale and unchanged DSP
         run: python tests/verify_v0514.py
-      - name: Inspect analyzer GUI constructor layout and processor FFT
+      - name: Apply v0.5.15 GUI changes
+        run: python ci-source/apply_0515.py
+      - name: Inspect zero latency text and bottom panel draw methods
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          editor=Path("Source/PluginEditor.cpp").read_text()
-          header=Path("Source/PluginEditor.h").read_text()
-          processor=Path("Source/PluginProcessor.cpp").read_text()
-          ph=Path("Source/PluginProcessor.h").read_text()
-          print("=== EDITOR FIRST 29000 ===")
-          print(editor[27000:51000])
-          print("=== RELEVANT DECLARATIONS ===")
-          for term in ["::resized()", "::mouseDown(", "::buttonClicked(", "CetusproEQAudioProcessorEditor::plotRect", "holdButton", "smoothButton", "getWindow", "copySpectrumSamples", "CetusproEQAudioProcessor::fftOrder"]:
-              for file,src in [("editor",editor),("header",header),("processor",processor),("processor_h",ph)]:
-                  ix=src.find(term)
-                  if ix>=0:print(file,term,"AT",ix,src[max(0,ix-250):ix+3300])
-          print("=== HEADER ===")
-          print(header)
-          print("=== PROCESSOR FFT DEFINITIONS ===")
-          for term in ["fftOrder", "fftSize", "captureSpectrum(", "copySpectrumSamples(", "timerCallback("]:
-              for src in [processor,ph]:
-                  i=src.find(term)
-                  if i>=0: print(term,src[max(0,i-700):i+2000])
+          src=Path("Source/PluginEditor.cpp").read_text()
+          print("SOURCE SIZE",len(src))
+          for text in ["LATENCY","ZERO","latency","drawBottom","drawPanel","drawFooter","drawText","8-BAND","STEREO"]:
+              found=list(re.finditer(re.escape(text),src,re.I))
+              print("TERM",text,"MATCHES",len(found))
+              for m in found[:14]:
+                  print("MATCH",m.start(),repr(src[max(0,m.start()-250):m.end()+280]))
+          for match in re.finditer(r'(?m)^void CetusproEQAudioProcessorEditor::[A-Za-z0-9_]+\\(',src):
+              start=match.start()
+              if start>48000:
+                  print("FUNCTION",start,src[start:start+130])
+          for text in ["void CetusproEQAudioProcessorEditor::drawBottom", "void CetusproEQAudioProcessorEditor::paint("]:
+              i=src.find(text)
+              if i>=0:print("SECTION",src[i:i+10000])
           PY
