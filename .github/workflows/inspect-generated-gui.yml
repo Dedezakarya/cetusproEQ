@@ -58,7 +58,12 @@ jobs:
           processor=Path("Source/PluginProcessor.cpp").read_text()
           ph=Path("Source/PluginProcessor.h").read_text()
           print("=== EDITOR FIRST 29000 ===")
-          print(editor[:29000])
+          print(editor[27000:51000])
+          print("=== RELEVANT DECLARATIONS ===")
+          for term in ["::resized()", "::mouseDown(", "::buttonClicked(", "CetusproEQAudioProcessorEditor::plotRect", "holdButton", "smoothButton", "getWindow", "copySpectrumSamples", "CetusproEQAudioProcessor::fftOrder"]:
+              for file,src in [("editor",editor),("header",header),("processor",processor),("processor_h",ph)]:
+                  ix=src.find(term)
+                  if ix>=0:print(file,term,"AT",ix,src[max(0,ix-250):ix+3300])
           print("=== HEADER ===")
           print(header)
           print("=== PROCESSOR FFT DEFINITIONS ===")
