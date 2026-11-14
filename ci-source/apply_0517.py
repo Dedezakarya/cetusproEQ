@@ -74,11 +74,11 @@ engine=r'''    constexpr int controlBlock = 32;
     // PASS 1 - Analyze untouched input for every band BEFORE any EQ is applied.
     // This prevents earlier EQ bands from affecting later band detectors.
     const juce::AudioBuffer<float>* sidechainBuffer = nullptr;
-    juce::AudioBuffer<float> sidechainView;
-    if (source == 5 && getBusCount(true) > 1 && getBus(true,1)->isEnabled()) {
-        sidechainView = getBusBuffer(buffer, true, 1);
-        sidechainBuffer = &sidechainView;
-    }
+    const bool hasSidechain = source==5 && getBusCount(true)>1 && getBus(true,1)->isEnabled();
+    // Construct a non-owning JUCE bus view; avoid AudioBuffer copy assignment
+    // or allocations on the real-time audio thread.
+    auto sidechainView = hasSidechain ? getBusBuffer(buffer,true,1) : juce::AudioBuffer<float>();
+    if (sidechainView.getNumChannels()>0) sidechainBuffer=&sidechainView;
     for (int i=0; i<numBands; ++i) {
         auto& b = bands[static_cast<size_t>(i)];
         if (!isBandEnabled(i) || !isBandDynamicEnabled(i)) {
@@ -317,7 +317,7 @@ gui=swap(gui,
     g.setColour(juce::Colour::fromRGB(95,239,232));
     g.setFont(juce::FontOptions(10.2f,juce::Font::bold));
     g.drawText("GR "+juce::String(actualGR,1)+" dB",
-               chart.getRight()-136,chart.getY()+5,122,17,
+               chart.getX()+116,chart.getY()+5,122,17,
                juce::Justification::centredRight);''',
     "selected-band real GR readout")
 gui=swap(gui,
@@ -366,7 +366,7 @@ void CetusproEQAudioProcessorEditor::syncDynamicAdvancedButtons() {
     ratioButton.setButtonText("Ratio "+juce::String(ratio,1)+":1");
     kneeButton.setButtonText("Knee "+juce::String(knee,1)+"dB");
     const int det=juce::jlimit(0,1,juce::roundToInt(processor.readParam(id("detmode"))));
-    if(detectorMode.getSelectedId()!=det+1 && !detectorMode.isPopupActive())
+    if(detectorMode.getSelectedId()!=det+1)
         detectorMode.setSelectedId(det+1,juce::dontSendNotification);
 }''',
     "advanced button sync method")
