@@ -1,7 +1,7 @@
 name: Inspect cetusproEQ generated GUI
 on:
   push:
-    branches: [ 'feature/cetusproeq-v0.5.14-analyzer-calibration' ]
+    branches: [ 'feature/cetusproeq-v0.5.17-dynamic-engine' ]
 permissions:
   contents: read
 jobs:
@@ -51,28 +51,32 @@ jobs:
         run: python ci-source/apply_0514.py
       - name: Verify independent dBFS scale and unchanged DSP
         run: python tests/verify_v0514.py
-      - name: Inspect analyzer GUI constructor layout and processor FFT
+      - name: Apply v0.5.15 and v0.5.16
+        run: |
+          python ci-source/apply_0515.py
+          python ci-source/apply_0516.py
+      - name: Inspect generated dynamic processing and GUI bindings
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-          editor=Path("Source/PluginEditor.cpp").read_text()
-          header=Path("Source/PluginEditor.h").read_text()
-          processor=Path("Source/PluginProcessor.cpp").read_text()
-          ph=Path("Source/PluginProcessor.h").read_text()
-          print("=== EDITOR FIRST 29000 ===")
-          print(editor[27000:51000])
-          print("=== RELEVANT DECLARATIONS ===")
-          for term in ["::resized()", "::mouseDown(", "::buttonClicked(", "CetusproEQAudioProcessorEditor::plotRect", "holdButton", "smoothButton", "getWindow", "copySpectrumSamples", "CetusproEQAudioProcessor::fftOrder"]:
-              for file,src in [("editor",editor),("header",header),("processor",processor),("processor_h",ph)]:
-                  ix=src.find(term)
-                  if ix>=0:print(file,term,"AT",ix,src[max(0,ix-250):ix+3300])
-          print("=== HEADER ===")
-          print(header)
-          print("=== PROCESSOR FFT DEFINITIONS ===")
-          for term in ["fftOrder", "fftSize", "captureSpectrum(", "copySpectrumSamples(", "timerCallback("]:
-              for src in [processor,ph]:
-                  i=src.find(term)
-                  if i>=0: print(term,src[max(0,i-700):i+2000])
+          processor=Path('Source/PluginProcessor.cpp').read_text()
+          ph=Path('Source/PluginProcessor.h').read_text()
+          gui=Path('Source/PluginEditor.cpp').read_text()
+          eh=Path('Source/PluginEditor.h').read_text()
+          print("=== PROCESSOR FULL SOURCE ===")
+          print(processor)
+          print("=== PROCESSOR HEADER ===")
+          print(ph)
+          print("=== EDITOR HEADER ===")
+          print(eh)
+          print("=== EDITOR RELEVANT FUNCTIONS ===")
+          for key in ["CetusproEQAudioProcessorEditor::CetusproEQAudioProcessorEditor", "CetusproEQAudioProcessorEditor::resized()", "CetusproEQAudioProcessorEditor::buttonClicked", "CetusproEQAudioProcessorEditor::drawBottom", "CetusproEQAudioProcessorEditor::syncHud", "CetusproEQAudioProcessorEditor::bindFloatingControls"]:
+              i=gui.find(key)
+              if i<0:
+                  print("NOTFOUND",key)
+              else:
+                  n=gui.find("\\nvoid CetusproEQAudioProcessorEditor::",i+5)
+                  if n<0:n=min(len(gui),i+9000)
+                  print("METHOD",key,"SRC",gui[i:min(n,i+9000)])
           PY
