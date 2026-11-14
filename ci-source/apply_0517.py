@@ -98,9 +98,9 @@ engine=r'''    constexpr int controlBlock = 32;
         if (split) {
             using Coeff = juce::dsp::IIR::Coefficients<float>;
             Coeff::Ptr coeff;
-            if (type == CetusEQ::LowShelf)
+            if (type == 1)
                 coeff = Coeff::makeLowPass(currentSampleRate,freq,0.70710678f);
-            else if (type == CetusEQ::HighShelf)
+            else if (type == 2)
                 coeff = Coeff::makeHighPass(currentSampleRate,freq,0.70710678f);
             else
                 coeff = Coeff::makeBandPass(currentSampleRate,freq,q);
