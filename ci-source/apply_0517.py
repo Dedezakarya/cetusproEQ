@@ -388,7 +388,7 @@ config=config.replace("VERSION 0.5.16","VERSION 0.5.17",1)
 for token in ("BinaryData::CetusUndo_png","BinaryData::CetusRedo_png",
               'g.drawText("ZERO LATENCY"', "spectrumDb.fill(-96.0f)",
               'CetusEQ::makeCoefficients', 'CetusLink::send',
-              'CetusLink::read', 'getBusBuffer(buffer,true,0)'):
+              'CetusLink::read', 'getBusBuffer(buffer, true, 0)'):
     if token not in gui+proc:raise RuntimeError("Existing feature lost: "+token)
 # This is the first intentional DSP change after v0.5.12.
 for path,source in [(p,proc),(h,header),(e,gui),(eh,guih),(cm,config)]:
