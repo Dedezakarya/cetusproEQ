@@ -1,7 +1,7 @@
 name: Inspect cetusproEQ generated GUI
 on:
   push:
-    branches: [ 'feature/cetusproeq-v0.5.13-hplp-spectrum-curve' ]
+    branches: [ 'feature/cetusproeq-v0.5.14-analyzer-calibration' ]
 permissions:
   contents: read
 jobs:
@@ -47,24 +47,23 @@ jobs:
         run: python ci-source/apply_0513.py
       - name: Verify v0.5.13 and unchanged DSP
         run: python tests/verify_v0513.py
-      - name: Inspect filter selection, response and spectrum in generated GUI
+      - name: Inspect analyzer GUI constructor layout and processor FFT
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
-          for path in ["Source/PluginEditor.cpp","Source/PluginEditor.h","Source/PluginProcessor.cpp"]:
-              source=Path(path).read_text(encoding="utf8")
-              print("=== FILE",path,"BYTES",len(source))
-              for name in ["updateSpectrum","drawSpectrumAndCurve","comboBoxChanged","selectBand","updateSelectedBandControls","setBand","buttonClicked","getBandType","resetFlat","createLayout"]:
-                  matches=list(re.finditer(r'(?m)^.{0,120}(?:CetusproEQAudioProcessor|CetusproEQAudioProcessorEditor)::'+name+r'\s*\(',source))
-                  for m in matches:
-                      end=source.find("\nvoid ",m.start()+3)
-                      if end<0: end=min(len(source),m.start()+8500)
-                      print(">>> METHOD",name,"AT",m.start())
-                      print(source[m.start():min(end,m.start()+9800)])
-              if "PluginEditor" in path:
-                  for term in ["bandType.addListener","bandType.onChange","bandTypeAttachment","updateSpectrum","dbSpectrum","getMagnitudeForFrequency"]:
-                      ix=source.find(term)
-                      if ix>=0:print(">>> TOKEN",term,source[max(0,ix-500):ix+1200])
+          editor=Path("Source/PluginEditor.cpp").read_text()
+          header=Path("Source/PluginEditor.h").read_text()
+          processor=Path("Source/PluginProcessor.cpp").read_text()
+          ph=Path("Source/PluginProcessor.h").read_text()
+          print("=== EDITOR FIRST 29000 ===")
+          print(editor[:29000])
+          print("=== HEADER ===")
+          print(header)
+          print("=== PROCESSOR FFT DEFINITIONS ===")
+          for term in ["fftOrder", "fftSize", "captureSpectrum(", "copySpectrumSamples(", "timerCallback("]:
+              for src in [processor,ph]:
+                  i=src.find(term)
+                  if i>=0: print(term,src[max(0,i-700):i+2000])
           PY
