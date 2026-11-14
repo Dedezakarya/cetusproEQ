@@ -1,9 +1,9 @@
-name: Build cetusproEQ v0.5.16 VST3 + AU
+name: Build cetusproEQ v0.5.17 Dynamic Engine VST3 + AU
 
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, 'feature/cetusproeq-v0.4-proworkflow', 'feature/cetusproeq-v0.5.1-native-build', 'feature/cetusproeq-v0.5.3-compact-3d', 'feature/cetusproeq-v0.5.3-glass-ui-build', 'feature/cetusproeq-v0.5.4-brushed-metal', 'feature/cetusproeq-v0.5.5-soft-metal', 'feature/cetusproeq-v0.5.6-metal-spectrum-ui', 'feature/cetusproeq-v0.5.7-dark-compact-ui', 'feature/cetusproeq-v0.5.8-layout-fix', 'feature/cetusproeq-v0.5.9-compact-branding', 'feature/cetusproeq-v0.5.10.1-dropdown-font', 'feature/cetusproeq-v0.5.11-dark-knob-layout', 'feature/cetusproeq-v0.5.12-layout-pass1', 'feature/cetusproeq-v0.5.12.1-header-dynamics-fix', 'feature/cetusproeq-v0.5.12.2-ui-fixes', 'feature/cetusproeq-v0.5.13-hplp-spectrum-curve', 'feature/cetusproeq-v0.5.14-analyzer-calibration', 'feature/cetusproeq-v0.5.15-spectrum-fill-compact-buttons', 'feature/cetusproeq-v0.5.16-zero-latency-label' ]
+    branches: [ main, master, 'feature/cetusproeq-v0.4-proworkflow', 'feature/cetusproeq-v0.5.1-native-build', 'feature/cetusproeq-v0.5.3-compact-3d', 'feature/cetusproeq-v0.5.3-glass-ui-build', 'feature/cetusproeq-v0.5.4-brushed-metal', 'feature/cetusproeq-v0.5.5-soft-metal', 'feature/cetusproeq-v0.5.6-metal-spectrum-ui', 'feature/cetusproeq-v0.5.7-dark-compact-ui', 'feature/cetusproeq-v0.5.8-layout-fix', 'feature/cetusproeq-v0.5.9-compact-branding', 'feature/cetusproeq-v0.5.10.1-dropdown-font', 'feature/cetusproeq-v0.5.11-dark-knob-layout', 'feature/cetusproeq-v0.5.12-layout-pass1', 'feature/cetusproeq-v0.5.12.1-header-dynamics-fix', 'feature/cetusproeq-v0.5.12.2-ui-fixes', 'feature/cetusproeq-v0.5.13-hplp-spectrum-curve', 'feature/cetusproeq-v0.5.14-analyzer-calibration', 'feature/cetusproeq-v0.5.15-spectrum-fill-compact-buttons', 'feature/cetusproeq-v0.5.16-zero-latency-label', 'feature/cetusproeq-v0.5.17-dynamic-engine' ]
   pull_request:
     branches: [ main ]
 
@@ -73,8 +73,12 @@ jobs:
         run: python ci-source/apply_0516.py
       - name: Verify v0.5.16 label position and unchanged DSP
         run: python tests/verify_v0516.py
+      - name: Apply v0.5.17 frequency selective Dynamic EQ DSP and per-band UI
+        run: python ci-source/apply_0517.py
+      - name: Verify v0.5.17 detector, ratio knee dynamics and unchanged old parameter IDs
+        run: python tests/verify_v0517.py
       - name: Validate version and immutable DSP
-        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.16' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.16 source verified')"
+        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.17' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.17 source verified')"
       - name: Tool versions
         shell: pwsh
         run: |
@@ -83,7 +87,7 @@ jobs:
       - name: Configure (Visual Studio 2022)
         shell: pwsh
         run: cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64
-      - name: Compile VST3 and Standalone (same unchanged audio DSP)
+      - name: Compile v0.5.17 dynamic DSP and Standalone
         shell: pwsh
         run: cmake --build build-win --config Release --target cetusproEQ_VST3 cetusproEQ_Standalone --parallel 4
       - name: Verify Standalone starts and stays alive (Windows smoke test)
@@ -126,7 +130,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cetusproEQ-v0.5.16-Windows-validation-logs
+          name: cetusproEQ-v0.5.17-Windows-validation-logs
           path: validation-logs/
           if-no-files-found: ignore
           retention-days: 14
@@ -140,7 +144,7 @@ jobs:
           if (-not @(Get-ChildItem -LiteralPath $bundle -Recurse -File -Filter *.vst3).Count) {
             throw "Built VST3 bundle has no .vst3 module: $bundle"
           }
-          Compress-Archive -LiteralPath $bundle -DestinationPath dist/cetusproEQ-v0.5.16-Windows-x64-VST3.zip -CompressionLevel Optimal -Force
+          Compress-Archive -LiteralPath $bundle -DestinationPath dist/cetusproEQ-v0.5.17-Windows-x64-VST3.zip -CompressionLevel Optimal -Force
           Get-Item dist/*.zip | Select-Object Name,Length
       - name: Package Windows Standalone executable
         shell: pwsh
@@ -148,19 +152,19 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $exes = @(Get-ChildItem build-win/cetusproEQ_artefacts -Recurse -File -Filter cetusproEQ.exe)
           if ($exes.Count -ne 1) { throw "Standalone executable missing" }
-          Compress-Archive -LiteralPath $exes[0].FullName -DestinationPath dist/cetusproEQ-v0.5.16-Windows-x64-Standalone.zip -CompressionLevel Optimal -Force
+          Compress-Archive -LiteralPath $exes[0].FullName -DestinationPath dist/cetusproEQ-v0.5.17-Windows-x64-Standalone.zip -CompressionLevel Optimal -Force
       - name: Upload Windows Standalone artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cetusproEQ-v0.5.16-Windows-x64-Standalone
-          path: dist/cetusproEQ-v0.5.16-Windows-x64-Standalone.zip
+          name: cetusproEQ-v0.5.17-Windows-x64-Standalone
+          path: dist/cetusproEQ-v0.5.17-Windows-x64-Standalone.zip
           if-no-files-found: error
           retention-days: 30
       - name: Upload Windows VST3 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cetusproEQ-v0.5.16-Windows-x64-VST3
-          path: dist/cetusproEQ-v0.5.16-Windows-x64-VST3.zip
+          name: cetusproEQ-v0.5.17-Windows-x64-VST3
+          path: dist/cetusproEQ-v0.5.17-Windows-x64-VST3.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -226,8 +230,12 @@ jobs:
         run: python ci-source/apply_0516.py
       - name: Verify v0.5.16 label position and unchanged DSP
         run: python tests/verify_v0516.py
+      - name: Apply v0.5.17 frequency selective Dynamic EQ DSP and per-band UI
+        run: python ci-source/apply_0517.py
+      - name: Verify v0.5.17 detector, ratio knee dynamics and unchanged old parameter IDs
+        run: python tests/verify_v0517.py
       - name: Validate version and immutable DSP
-        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.16' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.16 source verified')"
+        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.17' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.17 source verified')"
       - name: Tool versions
         run: |
           cmake --version
@@ -260,13 +268,13 @@ jobs:
           xcrun lipo "$au/Contents/MacOS/cetusproEQ" -verify_arch arm64
           codesign --force --deep --sign - "$vst"
           codesign --force --deep --sign - "$au"
-          ditto -c -k --sequesterRsrc --keepParent "$vst" dist/cetusproEQ-v0.5.16-macOS-Universal-VST3.zip
-          ditto -c -k --sequesterRsrc --keepParent "$au" dist/cetusproEQ-v0.5.16-macOS-Universal-AU.zip
+          ditto -c -k --sequesterRsrc --keepParent "$vst" dist/cetusproEQ-v0.5.17-macOS-Universal-VST3.zip
+          ditto -c -k --sequesterRsrc --keepParent "$au" dist/cetusproEQ-v0.5.17-macOS-Universal-AU.zip
           ls -lh dist/*.zip
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cetusproEQ-v0.5.16-macOS-Universal-AU-and-VST3
+          name: cetusproEQ-v0.5.17-macOS-Universal-AU-and-VST3
           path: dist/*.zip
           if-no-files-found: error
           retention-days: 30
