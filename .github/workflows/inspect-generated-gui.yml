@@ -47,6 +47,10 @@ jobs:
         run: python ci-source/apply_0513.py
       - name: Verify v0.5.13 and unchanged DSP
         run: python tests/verify_v0513.py
+      - name: Apply calibrated analyzer patch v0.5.14
+        run: python ci-source/apply_0514.py
+      - name: Verify independent dBFS scale and unchanged DSP
+        run: python tests/verify_v0514.py
       - name: Inspect analyzer GUI constructor layout and processor FFT
         shell: bash
         run: |
