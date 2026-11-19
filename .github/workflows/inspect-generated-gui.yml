@@ -1,7 +1,7 @@
 name: Inspect cetusproEQ generated GUI
 on:
   push:
-    branches: [ 'feature/cetusproeq-v0.5.18-band-solo-polarity-invert' ]
+    branches: [ 'feature/cetusproeq-v0.5.19-solo-button-layout' ]
 permissions:
   contents: read
 jobs:
@@ -63,3 +63,7 @@ jobs:
         run: python ci-source/apply_0518.py
       - name: Verify v0.5.18 solo, phase inversion and legacy compatibility
         run: python tests/verify_v0518.py
+      - name: Apply v0.5.19 compact orange-on S next to Detector Mode
+        run: python ci-source/apply_0519.py
+      - name: Verify v0.5.19 layout and retained Solo/Ø functionality
+        run: python tests/verify_v0519.py
