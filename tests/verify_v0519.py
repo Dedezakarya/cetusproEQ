@@ -36,7 +36,10 @@ for t in ('BinaryData::CetusUndo_png','BinaryData::CetusRedo_png',
           'g.drawText("ZERO LATENCY"','analyzerRangeIndex','ratioButton',
           'kneeButton'):
     assert t in cpp,t
-for p in ("Source/PluginProcessor.cpp","Source/PluginProcessor.h"):
-    content=Path(p).read_text(encoding="utf8")
-    assert "soloBand" in content and "polarity" in content
+# Audio parameters are registered in the processor implementation.
+# The processor header holds processing members, not parameter ID literals.
+content=Path("Source/PluginProcessor.cpp").read_text(encoding="utf8")
+assert 'juce::ParameterID("soloBand",1)' in content
+assert 'juce::ParameterID("polarity",1)' in content
+assert "renderBandAudition" in content
 print("PASS v0.5.19: non-overlapping Detector Mode/S placement, orange-on S, solo and Ø features preserved")
