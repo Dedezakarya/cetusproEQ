@@ -59,31 +59,7 @@ jobs:
         run: python ci-source/apply_0517.py
       - name: Run dynamic-engine numeric regression tests
         run: python tests/verify_v0517.py
-      - name: Inspect exact LookAndFeel GUI painting and process output
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('Source/PluginProcessor.cpp').read_text()
-          h=Path('Source/PluginProcessor.h').read_text()
-          e=Path('Source/PluginEditor.cpp').read_text()
-          eh=Path('Source/PluginEditor.h').read_text()
-          keys=[
-              ('processor',p,'void CetusproEQAudioProcessor::processBlock'),
-              ('processor',p,'void CetusproEQAudioProcessor::prepareToPlay'),
-              ('processor',p,'juce::AudioProcessorValueTreeState::ParameterLayout CetusproEQAudioProcessor::createLayout'),
-              ('editor',e,'void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawButtonBackground'),
-              ('editor',e,'void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawButtonText'),
-              ('editor',e,'void CetusproEQAudioProcessorEditor::resized'),
-              ('editor',e,'void CetusproEQAudioProcessorEditor::buttonClicked'),
-              ('editor',e,'void CetusproEQAudioProcessorEditor::timerCallback'),
-          ]
-          for name,src,key in keys:
-              i=src.find(key)
-              print('== SECTION',name,key,'AT',i,'==')
-              if i>=0:print(src[i:i+(13500 if 'processBlock' in key else 4800)])
-          print('== HEADER PROCESSOR ==')
-          print(h)
-          print('== HEADER EDITOR ==')
-          print(eh)
-          PY
+      - name: Apply v0.5.18 Band Solo and Polarity Invert
+        run: python ci-source/apply_0518.py
+      - name: Verify v0.5.18 solo, phase inversion and legacy compatibility
+        run: python tests/verify_v0518.py
