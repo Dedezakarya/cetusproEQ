@@ -1,7 +1,7 @@
 name: Inspect cetusproEQ generated GUI
 on:
   push:
-    branches: [ 'feature/cetusproeq-v0.5.19-solo-button-layout' ]
+    branches: [ 'feature/cetusproeq-v0.5.20-analog-brushed-metal' ]
 permissions:
   contents: read
 jobs:
@@ -67,3 +67,20 @@ jobs:
         run: python ci-source/apply_0519.py
       - name: Verify v0.5.19 layout and retained Solo/Ø functionality
         run: python tests/verify_v0519.py
+      - name: Inspect analog skin application points
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("Source/PluginEditor.cpp").read_text()
+          for key in ("void drawGlass(", "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawRotarySlider",
+                      "void CetusproEQAudioProcessorEditor::drawBottom",
+                      "void CetusproEQAudioProcessorEditor::paint(",
+                      "CetusMetal::machinedKnob", "CetusMetal::brushedSurface"):
+              start=0
+              print("== KEY",key,"COUNT",p.count(key))
+              for i in range(min(3,p.count(key))):
+                  at=p.find(key,start)
+                  print("== AT",at, "SOURCE", p[max(0,at-200):at+7400])
+                  start=at+len(key)
+          PY
