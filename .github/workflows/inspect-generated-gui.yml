@@ -86,31 +86,7 @@ jobs:
         run: python ci-source/apply_0521.py
       - name: Verify v0.5.21 texture and existing controls
         run: python tests/verify_v0521.py
-      - name: Inspect v0.5.21 shading and renderer methods
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          s=Path("Source/PluginEditor.cpp").read_text(encoding="utf8")
-          metal=Path("Source/CetusMetalSkin.h").read_text(encoding="utf8")
-          print("=== SKIN HELPERS ===")
-          for key in ["inline void buttonBevel(", "inline void machinedKnob(", "inline void analogKnobTexture("]:
-              i=metal.find(key)
-              j=metal.find("\ninline ",i+12)
-              if i>=0:print("=== FUNC",key,"POS",i,"===\n",metal[i:j if j>=0 else i+6500])
-          print("=== EDITOR FUNCTIONS ===")
-          for key in ["void drawGlass(", "void drawInset(", "void drawShadow(",
-                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawButtonBackground",
-                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawButtonText",
-                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawComboBox",
-                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawRotarySlider",
-                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawToggleButton",
-                      "void CetusproEQAudioProcessorEditor::drawBottom",
-                      "void CetusproEQAudioProcessorEditor::paint("]:
-              i=s.find(key)
-              print("=== FUNC",key,"POS",i,"===")
-              if i>=0:
-                  nxt=s.find("\nvoid ",i+15)
-                  if nxt<0 or nxt-i>8500:nxt=i+8500
-                  print(s[i:nxt])
-          PY
+      - name: Apply v0.5.22 softer shading and highlights (GUI only)
+        run: python ci-source/apply_0522.py
+      - name: Verify v0.5.22 renderer, satin grain and controls
+        run: python tests/verify_v0522.py
