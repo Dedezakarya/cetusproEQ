@@ -1,7 +1,7 @@
-name: Inspect cetusproEQ generated GUI
+name: Inspect v0.5.22 Shading Source
 on:
   push:
-    branches: [ 'feature/cetusproeq-v0.5.20-analog-brushed-metal' ]
+    branches: [ 'feature/cetusproeq-v0.5.22-soft-shading-refine' ]
 permissions:
   contents: read
 jobs:
@@ -33,6 +33,15 @@ jobs:
         run: python ci-source/apply_05101.py
       - name: Apply v0.5.11 graphite knobs, coloured indicators and branded header (GUI-only)
         run: python ci-source/apply_0511.py
+      - name: Capture exact v0.5.11 generated editor for compatibility check
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre0512-source-${{ runner.os }}
+          path: |
+            Source/PluginEditor.cpp
+            Source/PluginEditor.h
+            CMakeLists.txt
+          retention-days: 1
       - name: Apply verified v0.5.12 GUI-only layout and switch patch
         run: python ci-source/apply_0512.py
       - name: Fix v0.5.12.1 Dynamic switch availability and header alignment (GUI only)
@@ -41,33 +50,67 @@ jobs:
         run: python ci-source/apply_05122.py
       - name: Verify v0.5.12 source and original audio DSP
         run: python tests/verify_v0512.py
-      - name: Validate version and immutable DSP
-        run: python -c "from pathlib import Path; c=Path('CMakeLists.txt').read_text(); assert 'VERSION 0.5.12.2' in c, 'Incorrect version'; assert Path('Source/PluginEditor.cpp').stat().st_size > 50000; print('v0.5.12.2 source verified')"
-      - name: Apply v0.5.13 filter and analyzer improvements
+      - name: Apply v0.5.13 HP/LP Butterworth default and interpolated spectrum (GUI only)
         run: python ci-source/apply_0513.py
-      - name: Verify v0.5.13 and unchanged DSP
+      - name: Verify v0.5.13 source, filter curve, and unchanged DSP
         run: python tests/verify_v0513.py
-      - name: Apply calibrated analyzer patch v0.5.14
+      - name: Apply calibrated analyzer v0.5.14 (GUI-only dBFS, Range Tilt Reference)
         run: python ci-source/apply_0514.py
-      - name: Verify independent dBFS scale and unchanged DSP
+      - name: Verify v0.5.14 analyzer and immutable DSP
         run: python tests/verify_v0514.py
-      - name: Apply v0.5.15 and v0.5.16
-        run: |
-          python ci-source/apply_0515.py
-          python ci-source/apply_0516.py
-      - name: Apply v0.5.17 dynamic engine and GUI
+      - name: Apply v0.5.15 filled spectrum and compact analyzer controls
+        run: python ci-source/apply_0515.py
+      - name: Verify v0.5.15 startup smoothing, GUI and untouched DSP
+        run: python tests/verify_v0515.py
+      - name: Apply v0.5.16 ZERO LATENCY label relocation (GUI only)
+        run: python ci-source/apply_0516.py
+      - name: Verify v0.5.16 label position and unchanged DSP
+        run: python tests/verify_v0516.py
+      - name: Apply v0.5.17 frequency selective Dynamic EQ DSP and per-band UI
         run: python ci-source/apply_0517.py
-      - name: Run dynamic-engine numeric regression tests
+      - name: Verify v0.5.17 detector, ratio knee dynamics and unchanged old parameter IDs
         run: python tests/verify_v0517.py
-      - name: Apply v0.5.18 Band Solo and Polarity Invert
+      - name: Apply v0.5.18 Band Solo audition and orange polarity invert Ø
         run: python ci-source/apply_0518.py
-      - name: Verify v0.5.18 solo, phase inversion and legacy compatibility
+      - name: Test v0.5.18 signal routing, polarity and GUI geometry
         run: python tests/verify_v0518.py
-      - name: Apply v0.5.19 compact orange-on S next to Detector Mode
+      - name: Apply v0.5.19 compact S layout by Detector Mode
         run: python ci-source/apply_0519.py
-      - name: Verify v0.5.19 layout and retained Solo/Ø functionality
+      - name: Verify Solo S position, colour and unchanged DSP
         run: python tests/verify_v0519.py
-      - name: Apply v0.5.20 brushed metal panel and analog knob patch
+      - name: Apply v0.5.20 satin brushed metal panels and analog machined knobs
         run: python ci-source/apply_0520.py
-      - name: Test v0.5.20 analog GUI and unchanged controls
+      - name: Verify v0.5.20 analog GUI texture and unchanged controls
         run: python tests/verify_v0520.py
+      - name: Apply v0.5.21 satin micrograin without visible panel stripes
+        run: python ci-source/apply_0521.py
+      - name: Verify v0.5.21 texture and existing controls
+        run: python tests/verify_v0521.py
+      - name: Inspect v0.5.21 shading and renderer methods
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path("Source/PluginEditor.cpp").read_text(encoding="utf8")
+          metal=Path("Source/CetusMetalSkin.h").read_text(encoding="utf8")
+          print("=== SKIN HELPERS ===")
+          for key in ["inline void buttonBevel(", "inline void machinedKnob(", "inline void analogKnobTexture("]:
+              i=metal.find(key)
+              j=metal.find("\ninline ",i+12)
+              if i>=0:print("=== FUNC",key,"POS",i,"===\n",metal[i:j if j>=0 else i+6500])
+          print("=== EDITOR FUNCTIONS ===")
+          for key in ["void drawGlass(", "void drawInset(", "void drawShadow(",
+                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawButtonBackground",
+                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawButtonText",
+                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawComboBox",
+                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawRotarySlider",
+                      "void CetusproEQAudioProcessorEditor::CetusLookAndFeel::drawToggleButton",
+                      "void CetusproEQAudioProcessorEditor::drawBottom",
+                      "void CetusproEQAudioProcessorEditor::paint("]:
+              i=s.find(key)
+              print("=== FUNC",key,"POS",i,"===")
+              if i>=0:
+                  nxt=s.find("\nvoid ",i+15)
+                  if nxt<0 or nxt-i>8500:nxt=i+8500
+                  print(s[i:nxt])
+          PY
